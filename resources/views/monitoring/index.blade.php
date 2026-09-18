@@ -1026,65 +1026,76 @@
 
         const camInputId = mainInputId.replace('photo', 'camera');
         const camInput = document.getElementById(camInputId);
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // On HTTP internal server (non-HTTPS), modern browsers block WebRTC getUserMedia.
-        // Synchronously launch device native camera input directly so it opens immediately!
-        const isSecure = (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-            && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
-
-        if (!isSecure) {
-            if (camInput) {
-                camInput.click();
-            } else {
-                const mainInput = document.getElementById(mainInputId);
-                if (mainInput) { mainInput.click(); }
-            }
-            return;
-        }
-
-        // On Secure Context (HTTPS / localhost): Open live interactive WebRTC camera modal
+        // Open live interactive Camera Modal
         const modal = document.getElementById('camera-capture-modal');
         const video = document.getElementById('camera-video');
         const loading = document.getElementById('camera-loading');
         const errorBox = document.getElementById('camera-error');
+        const errorMsg = document.getElementById('camera-error-msg');
 
         if (modal) { modal.classList.remove('hidden'); }
         if (loading) { loading.classList.remove('hidden'); }
         if (errorBox) { errorBox.classList.add('hidden'); }
 
-        try {
-            if (currentCameraStream) {
-                currentCameraStream.getTracks().forEach(t => t.stop());
-                currentCameraStream = null;
-            }
-
-            let stream = null;
+        // Attempt WebRTC getUserMedia (Works on localhost, HTTPS, and supporting browsers)
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
             try {
-                // Try rear camera on mobile first
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-                    audio: false
-                });
-            } catch (e) {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: false
-                });
+                if (currentCameraStream) {
+                    currentCameraStream.getTracks().forEach(t => t.stop());
+                    currentCameraStream = null;
+                }
+
+                let stream = null;
+                try {
+                    // Try rear camera on mobile first, or standard video on laptop
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                } catch (e) {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+                }
+
+                currentCameraStream = stream;
+                video.srcObject = stream;
+                await video.play();
+
+                if (loading) { loading.classList.add('hidden'); }
+                return;
+            } catch (err) {
+                console.warn('getUserMedia error:', err);
+                if (isMobile && camInput) {
+                    window.closeCameraModal();
+                    camInput.click();
+                    return;
+                }
+                if (loading) { loading.classList.add('hidden'); }
+                if (errorBox) {
+                    errorBox.classList.remove('hidden');
+                    if (errorMsg) {
+                        errorMsg.textContent = 'Kamera tidak dapat diakses (' + (err.name || 'Izin ditolak') + '). Pastikan izin kamera aktif pada browser.';
+                    }
+                }
+                return;
             }
+        }
 
-            currentCameraStream = stream;
-            video.srcObject = stream;
-            await video.play();
-
-            if (loading) { loading.classList.add('hidden'); }
-        } catch (err) {
-            console.warn('WebRTC modal unavailable, opening native camera fallback:', err);
+        // If navigator.mediaDevices is blocked by browser on HTTP
+        if (isMobile && camInput) {
             window.closeCameraModal();
-            if (camInput) {
-                camInput.click();
-            } else {
-                const mainInput = document.getElementById(mainInputId);
-                if (mainInput) { mainInput.click(); }
+            camInput.click();
+        } else {
+            if (loading) { loading.classList.add('hidden'); }
+            if (errorBox) {
+                errorBox.classList.remove('hidden');
+                if (errorMsg) {
+                    errorMsg.innerHTML = 'Browser membatasi akses video langsung pada koneksi HTTP non-HTTPS.<br><span class="text-slate-300 font-normal mt-1 block">Gunakan Smartphone untuk langsung membuka kamera bawaan, atau pilih file foto dari komputer.</span>';
+                }
             }
         }
     };
