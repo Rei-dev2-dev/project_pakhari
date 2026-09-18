@@ -937,13 +937,16 @@
         const file = event.target.files[0];
         if (!file) { return; }
         const mainInput = document.getElementById(mainInputId);
+        const camInput = event.target;
+
         if (mainInput && event.target.files) {
             try {
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
                 mainInput.files = dataTransfer.files;
             } catch (e) {
-                console.warn('DataTransfer sync error:', e);
+                camInput.name = 'photo';
+                mainInput.name = '';
             }
         }
         window.previewPhoto(event, previewId, labelId);
@@ -972,10 +975,168 @@
         const camInput = camInputId ? document.getElementById(camInputId) : null;
         const preview = document.getElementById(previewId);
         const label = document.getElementById(labelId);
-        if (input) { input.value = ''; }
-        if (camInput) { camInput.value = ''; }
+        if (input) { 
+            input.value = ''; 
+            input.name = 'photo';
+        }
+        if (camInput) { 
+            camInput.value = ''; 
+            camInput.removeAttribute('name');
+        }
         if (preview) { preview.classList.add('hidden'); }
         if (label) { label.textContent = 'Klik tanda plus (+) untuk unggah bukti...'; }
+    };
+
+    // --- CAMERA CAPTURE LOGIC (SUPPORTS BOTH HTTP INTERNAL & HTTPS) ---
+    let currentCameraStream = null;
+    let activeMainInputId = null;
+    let activePreviewId = null;
+    let activeLabelId = null;
+
+    window.openLiveCamera = async function(mainInputId, previewId, labelId, menuId) {
+        if (menuId) {
+            const menu = document.getElementById(menuId);
+            if (menu) menu.classList.add('hidden');
+        }
+
+        activeMainInputId = mainInputId;
+        activePreviewId = previewId;
+        activeLabelId = labelId;
+
+        const camInputId = mainInputId.replace('photo', 'camera');
+        const camInput = document.getElementById(camInputId);
+
+        // On HTTP internal server (non-HTTPS), modern browsers block WebRTC getUserMedia.
+        // Synchronously launch device camera directly so it opens immediately without error!
+        const isSecure = (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
+
+        if (!isSecure) {
+            if (camInput) {
+                camInput.click();
+            } else {
+                const mainInput = document.getElementById(mainInputId);
+                if (mainInput) mainInput.click();
+            }
+            return;
+        }
+
+        // On Secure Context (HTTPS / localhost): Open live interactive WebRTC camera modal
+        const modal = document.getElementById('camera-capture-modal');
+        const video = document.getElementById('camera-video');
+        const loading = document.getElementById('camera-loading');
+        const errorBox = document.getElementById('camera-error');
+        const errorMsg = document.getElementById('camera-error-msg');
+
+        if (modal) modal.classList.remove('hidden');
+        if (loading) loading.classList.remove('hidden');
+        if (errorBox) errorBox.classList.add('hidden');
+
+        try {
+            if (currentCameraStream) {
+                currentCameraStream.getTracks().forEach(t => t.stop());
+                currentCameraStream = null;
+            }
+
+            let stream = null;
+            try {
+                // Try rear camera on mobile first
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                });
+            } catch (e) {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
+            }
+
+            currentCameraStream = stream;
+            video.srcObject = stream;
+            await video.play();
+
+            if (loading) loading.classList.add('hidden');
+        } catch (err) {
+            console.warn('WebRTC modal unavailable, opening native camera fallback:', err);
+            window.closeCameraModal();
+            if (camInput) {
+                camInput.click();
+            } else {
+                const mainInput = document.getElementById(mainInputId);
+                if (mainInput) mainInput.click();
+            }
+        }
+    };
+
+    window.closeCameraModal = function() {
+        const modal = document.getElementById('camera-capture-modal');
+        if (modal) modal.classList.add('hidden');
+
+        if (currentCameraStream) {
+            currentCameraStream.getTracks().forEach(t => t.stop());
+            currentCameraStream = null;
+        }
+
+        const video = document.getElementById('camera-video');
+        if (video) video.srcObject = null;
+    };
+
+    window.captureCameraSnapshot = function() {
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('camera-canvas');
+        if (!video || !canvas || !currentCameraStream) {
+            window.closeCameraModal();
+            return;
+        }
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                window.closeCameraModal();
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+            const filename = `kamera_bbm_${timestamp}.jpg`;
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+
+            if (activeMainInputId) {
+                const mainInput = document.getElementById(activeMainInputId);
+                if (mainInput) {
+                    try {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        mainInput.files = dataTransfer.files;
+                    } catch (e) {
+                        console.warn('DataTransfer error:', e);
+                    }
+                }
+            }
+
+            if (activePreviewId) {
+                const preview = document.getElementById(activePreviewId);
+                if (preview) {
+                    preview.classList.remove('hidden');
+                    const img = preview.querySelector('.preview-img');
+                    const fname = preview.querySelector('.preview-filename');
+                    if (img) img.src = canvas.toDataURL('image/jpeg', 0.9);
+                    if (fname) fname.textContent = filename;
+                }
+            }
+
+            if (activeLabelId) {
+                const label = document.getElementById(activeLabelId);
+                if (label) label.textContent = filename;
+            }
+
+            window.closeCameraModal();
+        }, 'image/jpeg', 0.9);
     };
 
     // Close any open popover when clicking anywhere outside
