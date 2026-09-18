@@ -20,6 +20,35 @@ class MultiRoleSystemTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+
+        // Create secondary test users for role authorization tests
+        User::firstOrCreate(
+            ['username' => 'Renaldi'],
+            [
+                'name' => 'Renaldi',
+                'email' => 'renaldi@pelindo.co.id',
+                'password' => 'Pelindo3',
+                'role' => User::ROLE_STAFF,
+            ]
+        );
+        User::firstOrCreate(
+            ['username' => 'Operator'],
+            [
+                'name' => 'Operator BBM',
+                'email' => 'operator@pelindo.co.id',
+                'password' => 'Pelindo3',
+                'role' => User::ROLE_OPERATOR,
+            ]
+        );
+        User::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'name' => 'Administrator',
+                'email' => 'admin@pelindo.co.id',
+                'password' => 'Pelindo3',
+                'role' => User::ROLE_ADMIN,
+            ]
+        );
     }
 
     public function test_unauthenticated_user_redirected_to_login(): void
@@ -32,10 +61,8 @@ class MultiRoleSystemTest extends TestCase
     {
         $response = $this->get('/login');
         $response->assertOk();
-        $response->assertSee('Monitoring Tandon Air');
-        $response->assertSee('Renaldi');
-        $response->assertSee('admin');
-        $response->assertSee('Daniel');
+        $response->assertSee('Monitoring Tangki BBM Genset');
+        $response->assertDontSee('Pilihan Akun Demo');
     }
 
     public function test_staff_can_login_with_username(): void
@@ -314,5 +341,48 @@ class MultiRoleSystemTest extends TestCase
         $response = $this->actingAs($staff)->get('/laporan/export');
         $response->assertOk();
         $this->assertTrue(str_contains($response->headers->get('content-type'), 'text/csv'));
+    }
+
+    public function test_operator_can_record_pemasukan_with_photo_file(): void
+    {
+        Storage::fake('public');
+        $operator = User::where('username', 'Operator')->first();
+        $tank = Tank::where('code', 'TNK-A')->first();
+
+        $file = UploadedFile::fake()->image('bukti_solar.jpg');
+
+        $response = $this->actingAs($operator)->post('/monitoring/'.$tank->id.'/record-bbm', [
+            'type' => 'pemasukan',
+            'height_cm' => 45.0,
+            'notes' => 'Pemasukan dengan bukti foto',
+            'photo' => $file,
+        ]);
+
+        $response->assertRedirect();
+        $telemetry = TankTelemetry::where('tank_id', $tank->id)->latest('id')->first();
+        $this->assertNotNull($telemetry->photo_path);
+        Storage::disk('public')->assertExists($telemetry->photo_path);
+    }
+
+    public function test_operator_can_record_pemasukan_with_base64_compressed_photo(): void
+    {
+        Storage::fake('public');
+        $operator = User::where('username', 'Operator')->first();
+        $tank = Tank::where('code', 'TNK-A')->first();
+
+        // 1x1 transparent PNG/JPG base64
+        $fakeBase64 = 'data:image/jpeg;base64,'.base64_encode('fake-image-binary-data');
+
+        $response = $this->actingAs($operator)->post('/monitoring/'.$tank->id.'/record-bbm', [
+            'type' => 'pemasukan',
+            'height_cm' => 50.0,
+            'notes' => 'Pemasukan dengan bukti foto base64',
+            'photo_base64' => $fakeBase64,
+        ]);
+
+        $response->assertRedirect();
+        $telemetry = TankTelemetry::where('tank_id', $tank->id)->latest('id')->first();
+        $this->assertNotNull($telemetry->photo_path);
+        Storage::disk('public')->assertExists($telemetry->photo_path);
     }
 }

@@ -89,17 +89,17 @@
                 <div class="absolute bottom-4 left-4 z-10 pointer-events-none">
                     <div class="bg-slate-950/85 backdrop-blur-md px-4 py-3 rounded-2xl border border-slate-800 shadow-2xl flex items-center space-x-4">
                         <div class="w-3 h-12 bg-slate-800 rounded-full overflow-hidden p-0.5 flex flex-col justify-end">
-                            <div id="floatingLevelBar" class="w-full bg-gradient-to-t from-amber-500 to-yellow-400 rounded-full transition-all duration-300" style="height: {{ $latest->percentage ?? 35 }}%;"></div>
+                            <div id="floatingLevelBar" class="w-full bg-gradient-to-t from-amber-500 to-yellow-400 rounded-full transition-all duration-300" style="height: {{ $latest->percentage ?? 0 }}%;"></div>
                         </div>
                         <div>
                             <div class="flex items-baseline space-x-1">
-                                <span class="text-2xl font-extrabold font-mono text-white" id="floatingLiters">{{ number_format($latest->volume_liters ?? 35.0, 1) }}</span>
+                                <span class="text-2xl font-extrabold font-mono text-white" id="floatingLiters">{{ number_format($latest->volume_liters ?? 0.0, 1) }}</span>
                                 <span class="text-xs font-mono text-slate-400">/ {{ number_format($maxCapacity, 0) }} Liter</span>
                             </div>
                             <div class="flex items-center space-x-2 text-[11px] text-slate-400">
-                                <span id="floatingHeight">Tinggi: {{ number_format($latest->height_cm ?? 24.5, 1) }} cm</span>
+                                <span id="floatingHeight">Tinggi: {{ number_format($latest->height_cm ?? 0.0, 1) }} cm</span>
                                 <span>&bull;</span>
-                                <span class="text-amber-400 font-bold" id="floatingPercentage">{{ number_format($latest->percentage ?? 35.0, 1) }}%</span>
+                                <span class="text-amber-400 font-bold" id="floatingPercentage">{{ number_format($latest->percentage ?? 0.0, 1) }}%</span>
                             </div>
                         </div>
                     </div>
@@ -142,8 +142,8 @@
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                     <span class="text-[11px] text-slate-400 block font-medium">Status Tangki</span>
                     <div class="mt-1">
-                        <span id="cardStatus" class="inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                            {{ strtoupper(str_replace('_', ' ', $latest->status ?? 'NORMAL')) }}
+                        <span id="cardStatus" class="inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/30">
+                            {{ strtoupper(str_replace('_', ' ', $latest->status ?? 'EMPTY')) }}
                         </span>
                     </div>
                 </div>
@@ -276,7 +276,7 @@
     const MAX_HEIGHT_CM = {{ (float) $maxHeight }};
     const UPDATE_URL = "{{ route('monitoring.update', $tank->id) }}";
 
-    let currentLiters = {{ (float) ($latest->volume_liters ?? 35.0) }};
+    let currentLiters = {{ (float) ($latest->volume_liters ?? 0.0) }};
     let targetLiters = currentLiters;
     let isGlass = true;
     let isLidOpen = true;

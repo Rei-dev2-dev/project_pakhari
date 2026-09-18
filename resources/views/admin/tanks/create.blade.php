@@ -108,7 +108,7 @@
             <div>
                 <label for="description" class="block text-xs font-semibold text-slate-300 mb-1.5">Deskripsi / Lokasi (Opsional)</label>
                 <textarea id="description" name="description" rows="2"
-                    placeholder="Contoh: Tangki penampungan suplai air dermaga barat"
+                    placeholder="Contoh: Tangki penampungan suplai BBM genset dermaga barat"
                     class="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">{{ old('description') }}</textarea>
             </div>
 

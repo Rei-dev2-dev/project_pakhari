@@ -18,62 +18,22 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Seed Required Users
-        $seedUsers = [
+        // 1. Seed Only SuperAdmin User (Production Launch Ready)
+        $superadmin = User::updateOrCreate(
+            ['username' => 'Daniel'],
             [
-                'username' => 'Renaldi',
-                'name' => 'Renaldi',
-                'email' => 'renaldi@pelindo.co.id',
-                'password' => 'Pelindo3',
-                'role' => User::ROLE_STAFF,
-            ],
-            [
-                'username' => 'Operator',
-                'name' => 'Operator BBM',
-                'email' => 'operator@pelindo.co.id',
-                'password' => 'Pelindo3',
-                'role' => User::ROLE_OPERATOR,
-            ],
-            [
-                'username' => 'admin',
-                'name' => 'Administrator',
-                'email' => 'admin@pelindo.co.id',
-                'password' => 'Pelindo3',
-                'role' => User::ROLE_ADMIN,
-            ],
-            [
-                'username' => 'Daniel',
                 'name' => 'Daniel',
+                'username' => 'Daniel',
                 'email' => 'daniel@pelindo.co.id',
                 'password' => 'Pelindo3',
                 'role' => User::ROLE_SUPERADMIN,
-            ],
-        ];
+            ]
+        );
 
-        $operatorUser = null;
-        foreach ($seedUsers as $uData) {
-            $existing = User::where('username', $uData['username'])
-                ->orWhere('email', $uData['email'])
-                ->first();
+        // Remove any non-superadmin demo accounts
+        User::where('username', '!=', 'Daniel')->delete();
 
-            if ($existing) {
-                $existing->update([
-                    'name' => $uData['name'],
-                    'username' => $uData['username'],
-                    'email' => $uData['email'],
-                    'role' => $uData['role'],
-                ]);
-                $userModel = $existing;
-            } else {
-                $userModel = User::create($uData);
-            }
-
-            if ($uData['role'] === User::ROLE_OPERATOR) {
-                $operatorUser = $userModel;
-            }
-        }
-
-        // 2. Seed 4 Default Tanks
+        // 2. Seed 4 Default BBM Tanks
         $tankA = Tank::updateOrCreate(
             ['code' => 'TNK-A'],
             [
@@ -83,7 +43,7 @@ class DatabaseSeeder extends Seeder
                 'width_cm' => 90.0,
                 'height_cm' => 70.0,
                 'diameter_cm' => 90.0,
-                'description' => 'Tangki distribusi utama air bersih Zona 1',
+                'description' => 'Tangki distribusi utama BBM Solar Genset Zona 1',
                 'is_active' => true,
                 'sort_order' => 1,
             ]
@@ -98,7 +58,7 @@ class DatabaseSeeder extends Seeder
                 'width_cm' => 100.0,
                 'height_cm' => 85.0,
                 'diameter_cm' => 100.0,
-                'description' => 'Tangki cadangan kapasitas sedang Zona 2',
+                'description' => 'Tangki cadangan BBM Solar Genset Zona 2',
                 'is_active' => true,
                 'sort_order' => 2,
             ]
@@ -113,7 +73,7 @@ class DatabaseSeeder extends Seeder
                 'width_cm' => 95.0,
                 'height_cm' => 75.0,
                 'diameter_cm' => 95.0,
-                'description' => 'Tangki penampungan perlakuan filter Zona 3',
+                'description' => 'Tangki penampungan BBM Solar Genset Zona 3',
                 'is_active' => true,
                 'sort_order' => 3,
             ]
@@ -128,37 +88,17 @@ class DatabaseSeeder extends Seeder
                 'width_cm' => 110.0,
                 'height_cm' => 100.0,
                 'diameter_cm' => 110.0,
-                'description' => 'Tangki kapasitas besar operasional Pelindo Zona Utama',
+                'description' => 'Tangki kapasitas besar BBM Solar Genset Zona Utama',
                 'is_active' => true,
                 'sort_order' => 4,
             ]
         );
 
-        // 3. Seed Initial Telemetry for each tank if none exists
-        $initialData = [
-            [$tankA, 45.0],
-            [$tankB, 120.0],
-            [$tankC, 30.0],
-            [$tankD, 210.0],
-        ];
+        // Clean out any old dummy tanks (such as TG1, TG2)
+        Tank::whereNotIn('code', ['TNK-A', 'TNK-B', 'TNK-C', 'TNK-D'])->delete();
 
-        foreach ($initialData as [$tank, $vol]) {
-            if ($tank->telemetries()->count() === 0) {
-                $pct = round(($vol / $tank->capacity_liters) * 100, 2);
-                $h = round(($vol / $tank->capacity_liters) * $tank->height_cm, 2);
-                TankTelemetry::create([
-                    'tank_id' => $tank->id,
-                    'user_id' => $operatorUser->id,
-                    'volume_liters' => $vol,
-                    'percentage' => $pct,
-                    'height_cm' => $h,
-                    'status' => TankTelemetry::determineStatus($vol, $tank->capacity_liters),
-                    'source' => 'system_init',
-                    'device_id' => 'OPERATOR-'.$operatorUser->username,
-                    'notes' => 'Inisialisasi sistem sensor '.$tank->name,
-                ]);
-            }
-        }
+        // 3. Clean and Empty All Telemetries (Zero records for clean production launch)
+        TankTelemetry::truncate();
 
         // 4. Seed Default Sidebar Menus
         $menus = [

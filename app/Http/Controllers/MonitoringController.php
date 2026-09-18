@@ -6,6 +6,7 @@ use App\Models\Tank;
 use App\Models\TankTelemetry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class MonitoringController extends Controller
@@ -23,25 +24,6 @@ class MonitoringController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
-        // Ensure each tank has an initial telemetry record if empty
-        foreach ($tanks as $tank) {
-            if ($tank->telemetries->isEmpty()) {
-                $defaultVol = round($tank->capacity_liters * 0.35, 1);
-                $pct = 35.0;
-                $height = round(($defaultVol / $tank->capacity_liters) * $tank->height_cm, 1);
-                $tank->telemetries()->create([
-                    'volume_liters' => $defaultVol,
-                    'percentage' => $pct,
-                    'height_cm' => $height,
-                    'status' => TankTelemetry::determineStatus($defaultVol, $tank->capacity_liters),
-                    'source' => 'system_default',
-                    'device_id' => 'ESP32-'.$tank->code,
-                    'notes' => 'Nilai awal sistem '.$tank->name,
-                ]);
-                $tank->load('telemetries');
-            }
-        }
-
         return view('monitoring.index', [
             'tanks' => $tanks,
         ]);
@@ -53,22 +35,6 @@ class MonitoringController extends Controller
     public function show(Tank $tank): View
     {
         $latestTelemetry = $tank->telemetries()->latest()->first();
-
-        if (! $latestTelemetry) {
-            $defaultVol = round($tank->capacity_liters * 0.35, 1);
-            $pct = 35.0;
-            $height = round(($defaultVol / $tank->capacity_liters) * $tank->height_cm, 1);
-            $latestTelemetry = $tank->telemetries()->create([
-                'volume_liters' => $defaultVol,
-                'percentage' => $pct,
-                'height_cm' => $height,
-                'status' => TankTelemetry::determineStatus($defaultVol, $tank->capacity_liters),
-                'source' => 'system_default',
-                'device_id' => 'ESP32-'.$tank->code,
-                'notes' => 'Nilai awal sistem '.$tank->name,
-            ]);
-        }
-
         $recentLogs = $tank->telemetries()->with('user')->latest()->take(10)->get();
 
         return view('monitoring.show', [
@@ -108,12 +74,12 @@ class MonitoringController extends Controller
             'status' => $status,
             'source' => $validated['source'] ?? 'web_slider',
             'device_id' => $validated['device_id'] ?? ('ESP32-'.$tank->code),
-            'notes' => $validated['notes'] ?? 'Pembaruan level air',
+            'notes' => $validated['notes'] ?? 'Pembaruan level BBM (Solar)',
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Level air tandon berhasil diperbarui.',
+            'message' => 'Level BBM tangki berhasil diperbarui.',
             'telemetry' => $telemetry,
         ]);
     }
@@ -153,21 +119,39 @@ class MonitoringController extends Controller
             'type' => ['required', 'in:pemasukan,pemakaian'],
             'height_cm' => ['required', 'numeric', 'min:0', 'max:'.$maxHeight],
             'notes' => ['nullable', 'string', 'max:255'],
-            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,gif', 'max:10240'],
+            'photo' => ['nullable'],
+            'photo_cam' => ['nullable'],
+            'photo_base64' => ['nullable', 'string'],
         ], [
             'height_cm.max' => "Ketinggian BBM tidak boleh melebihi tinggi maksimal tangki ({$maxHeight} cm) yang ditentukan oleh Admin.",
             'height_cm.min' => 'Ketinggian BBM tidak boleh bernilai negatif.',
-            'photo.image' => 'File bukti harus berupa gambar (foto).',
-            'photo.max' => 'Ukuran file foto bukti maksimal 10 MB.',
         ]);
 
         $inputHeight = (float) $validated['height_cm'];
         $type = $validated['type'];
 
-        // Handle photo upload if present
+        // Handle photo upload if present (Supports standard file upload, camera input, and base64 string)
         $photoPath = null;
-        if ($request->hasFile('photo')) {
+        if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
             $photoPath = $request->file('photo')->store('telemetry_proofs', 'public');
+        } elseif ($request->hasFile('photo_cam') && $request->file('photo_cam')->isValid()) {
+            $photoPath = $request->file('photo_cam')->store('telemetry_proofs', 'public');
+        } elseif (! empty($validated['photo_base64'])) {
+            $base64Data = $validated['photo_base64'];
+            $ext = 'jpg';
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $typeMatch)) {
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                $ext = strtolower($typeMatch[1]);
+                if ($ext === 'jpeg') {
+                    $ext = 'jpg';
+                }
+            }
+            $decoded = base64_decode($base64Data);
+            if ($decoded !== false) {
+                $fileName = 'proof_'.now()->format('Ymd_His').'_'.uniqid().'.'.$ext;
+                Storage::disk('public')->put('telemetry_proofs/'.$fileName, $decoded);
+                $photoPath = 'telemetry_proofs/'.$fileName;
+            }
         }
 
         // Get latest telemetry to know initial state

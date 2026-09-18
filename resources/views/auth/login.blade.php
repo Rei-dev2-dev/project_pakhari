@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - Sistem Monitoring Tandon Air Pelindo</title>
+    <title>Login - Sistem Monitoring Tangki BBM Genset Pelindo</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +36,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
             </div>
-            <h1 class="text-xl font-bold tracking-tight text-white">Monitoring Tandon Air</h1>
+            <h1 class="text-xl font-bold tracking-tight text-white">Monitoring Tangki BBM Genset</h1>
             <p class="text-xs text-slate-400 mt-1">Sistem Pemantauan IoT Pelindo &mdash; Masuk dengan Akun Anda</p>
         </div>
 
@@ -76,7 +76,7 @@
                             </svg>
                         </div>
                         <input type="text" id="username" name="username" value="{{ old('username') }}" required autofocus
-                            placeholder="Contoh: Renaldi / admin / Daniel"
+                            placeholder="Masukkan username Anda"
                             class="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition">
                     </div>
                 </div>
@@ -109,41 +109,11 @@
                     </svg>
                 </button>
             </form>
-
-            <!-- Quick Account Selector (Click to fill) -->
-            <div class="mt-6 pt-5 border-t border-slate-800/80">
-                <div class="text-[11px] font-semibold text-slate-400 mb-2.5">Pilihan Akun Demo:</div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                    <button type="button" onclick="fillCredentials('Renaldi', 'Pelindo3')" class="p-2 rounded-lg bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-left transition hover:border-emerald-500/50">
-                        <span class="block font-bold text-emerald-400">Staff</span>
-                        <span class="text-slate-400 font-mono">Renaldi</span>
-                    </button>
-                    <button type="button" onclick="fillCredentials('Operator', 'Pelindo3')" class="p-2 rounded-lg bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-left transition hover:border-amber-500/50">
-                        <span class="block font-bold text-amber-400">Operator</span>
-                        <span class="text-slate-400 font-mono">Operator</span>
-                    </button>
-                    <button type="button" onclick="fillCredentials('admin', 'Pelindo3')" class="p-2 rounded-lg bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-left transition hover:border-sky-500/50">
-                        <span class="block font-bold text-sky-400">Admin</span>
-                        <span class="text-slate-400 font-mono">admin</span>
-                    </button>
-                    <button type="button" onclick="fillCredentials('Daniel', 'Pelindo3')" class="p-2 rounded-lg bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-left transition hover:border-purple-500/50">
-                        <span class="block font-bold text-purple-400">SuperAdmin</span>
-                        <span class="text-slate-400 font-mono">Daniel</span>
-                    </button>
-                </div>
-            </div>
         </div>
 
         <div class="text-center mt-6 text-slate-500 text-[11px]">
-            &copy; {{ date('Y') }} Pelindo IoT Water Management System
+            &copy; {{ date('Y') }} Pelindo IoT Fuel Management System
         </div>
     </div>
-
-    <script>
-        function fillCredentials(user, pass) {
-            document.getElementById('username').value = user;
-            document.getElementById('password').value = pass;
-        }
-    </script>
 </body>
 </html>

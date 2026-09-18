@@ -318,11 +318,12 @@
                                 <span class="text-[10px] text-slate-500 font-mono">JPG/PNG maks 10MB</span>
                             </label>
                             
-                            <!-- Hidden File & Camera Inputs -->
+                            <!-- Hidden File, Camera & Base64 Inputs -->
                             <input type="file" name="photo" id="pemasukan_photo_{{ $tank->id }}" accept="image/*" class="hidden"
-                                onchange="previewPhoto(event, 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}')">
-                            <input type="file" id="pemasukan_camera_{{ $tank->id }}" accept="image/*" capture="environment" class="hidden"
-                                onchange="handleCameraCapture(event, 'pemasukan_photo_{{ $tank->id }}', 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}')">
+                                onchange="processSelectedImage(event, 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}', 'pemasukan_base64_{{ $tank->id }}')">
+                            <input type="file" name="photo_cam" id="pemasukan_camera_{{ $tank->id }}" accept="image/*" capture="environment" class="hidden"
+                                onchange="processSelectedImage(event, 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}', 'pemasukan_base64_{{ $tank->id }}')">
+                            <input type="hidden" name="photo_base64" id="pemasukan_base64_{{ $tank->id }}">
 
                             <!-- Plus Button Container with Dropdown Menu -->
                             <div class="relative photo-menu-container">
@@ -340,7 +341,7 @@
                                     </span>
                                 </div>
 
-                                <!-- Floating Dropdown Menu (Matching User Reference Image) -->
+                                <!-- Floating Dropdown Menu -->
                                 <div id="pemasukan_menu_{{ $tank->id }}" 
                                     class="photo-dropdown-menu hidden absolute left-0 top-12 z-30 w-64 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl p-1.5 backdrop-blur-md">
                                     <button type="button" 
@@ -354,7 +355,7 @@
                                         </div>
                                     </button>
                                     <button type="button" 
-                                        onclick="openLiveCamera('pemasukan_photo_{{ $tank->id }}', 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}', 'pemasukan_menu_{{ $tank->id }}')" 
+                                        onclick="openLiveCamera('pemasukan_photo_{{ $tank->id }}', 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}', 'pemasukan_menu_{{ $tank->id }}', 'pemasukan_base64_{{ $tank->id }}')" 
                                         class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left hover:bg-slate-800 text-slate-200 hover:text-white transition group">
                                         <div class="flex items-center gap-2.5">
                                             <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -374,7 +375,7 @@
                                     <span class="text-xs font-semibold text-white block truncate preview-filename">filename.jpg</span>
                                     <span class="text-[10px] text-emerald-400 font-mono">Foto bukti siap disimpan</span>
                                 </div>
-                                <button type="button" onclick="clearPhoto('pemasukan_photo_{{ $tank->id }}', 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}', 'pemasukan_camera_{{ $tank->id }}')" 
+                                <button type="button" onclick="clearPhoto('pemasukan_photo_{{ $tank->id }}', 'pemasukan_preview_{{ $tank->id }}', 'pemasukan_file_label_{{ $tank->id }}', 'pemasukan_camera_{{ $tank->id }}', 'pemasukan_base64_{{ $tank->id }}')" 
                                     class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition text-xs font-bold">
                                     Batal
                                 </button>
@@ -506,11 +507,12 @@
                                 <span class="text-[10px] text-slate-500 font-mono">JPG/PNG maks 10MB</span>
                             </label>
                             
-                            <!-- Hidden File & Camera Inputs -->
+                            <!-- Hidden File, Camera & Base64 Inputs -->
                             <input type="file" name="photo" id="pemakaian_photo_{{ $tank->id }}" accept="image/*" class="hidden"
-                                onchange="previewPhoto(event, 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}')">
-                            <input type="file" id="pemakaian_camera_{{ $tank->id }}" accept="image/*" capture="environment" class="hidden"
-                                onchange="handleCameraCapture(event, 'pemakaian_photo_{{ $tank->id }}', 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}')">
+                                onchange="processSelectedImage(event, 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}', 'pemakaian_base64_{{ $tank->id }}')">
+                            <input type="file" name="photo_cam" id="pemakaian_camera_{{ $tank->id }}" accept="image/*" capture="environment" class="hidden"
+                                onchange="processSelectedImage(event, 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}', 'pemakaian_base64_{{ $tank->id }}')">
+                            <input type="hidden" name="photo_base64" id="pemakaian_base64_{{ $tank->id }}">
 
                             <!-- Plus Button Container with Dropdown Menu -->
                             <div class="relative photo-menu-container">
@@ -528,7 +530,7 @@
                                     </span>
                                 </div>
 
-                                <!-- Floating Dropdown Menu (Matching User Reference Image) -->
+                                <!-- Floating Dropdown Menu -->
                                 <div id="pemakaian_menu_{{ $tank->id }}" 
                                     class="photo-dropdown-menu hidden absolute left-0 top-12 z-30 w-64 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl p-1.5 backdrop-blur-md">
                                     <button type="button" 
@@ -542,7 +544,7 @@
                                         </div>
                                     </button>
                                     <button type="button" 
-                                        onclick="openLiveCamera('pemakaian_photo_{{ $tank->id }}', 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}', 'pemakaian_menu_{{ $tank->id }}')" 
+                                        onclick="openLiveCamera('pemakaian_photo_{{ $tank->id }}', 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}', 'pemakaian_menu_{{ $tank->id }}', 'pemakaian_base64_{{ $tank->id }}')" 
                                         class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left hover:bg-slate-800 text-slate-200 hover:text-white transition group">
                                         <div class="flex items-center gap-2.5">
                                             <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -562,7 +564,7 @@
                                     <span class="text-xs font-semibold text-white block truncate preview-filename">filename.jpg</span>
                                     <span class="text-[10px] text-amber-400 font-mono">Foto bukti siap disimpan</span>
                                 </div>
-                                <button type="button" onclick="clearPhoto('pemakaian_photo_{{ $tank->id }}', 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}', 'pemakaian_camera_{{ $tank->id }}')" 
+                                <button type="button" onclick="clearPhoto('pemakaian_photo_{{ $tank->id }}', 'pemakaian_preview_{{ $tank->id }}', 'pemakaian_file_label_{{ $tank->id }}', 'pemakaian_camera_{{ $tank->id }}', 'pemakaian_base64_{{ $tank->id }}')" 
                                     class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition text-xs font-bold">
                                     Batal
                                 </button>
@@ -914,42 +916,62 @@
         if (previewPct) previewPct.textContent = `${pct.toFixed(1)}%`;
     };
 
-    window.previewPhoto = function(event, previewId, labelId) {
-        const file = event.target.files[0];
+    window.processSelectedImage = function(event, previewId, labelId, base64InputId) {
+        const file = event.target.files && event.target.files[0];
         if (!file) { return; }
         const preview = document.getElementById(previewId);
         const label = document.getElementById(labelId);
+        const base64Input = base64InputId ? document.getElementById(base64InputId) : null;
+
+        if (label) { label.textContent = file.name || 'Memproses foto...'; }
+
         const reader = new FileReader();
         reader.onload = function(e) {
+            const rawDataUrl = e.target.result;
+            
+            // Show immediate preview
             if (preview) {
                 preview.classList.remove('hidden');
                 const img = preview.querySelector('.preview-img');
                 const fname = preview.querySelector('.preview-filename');
-                if (img) { img.src = e.target.result; }
-                if (fname) { fname.textContent = file.name; }
+                if (img) { img.src = rawDataUrl; }
+                if (fname) { fname.textContent = file.name || 'foto_bukti.jpg'; }
             }
-            if (label) { label.textContent = file.name; }
+
+            // Auto-compress via offscreen canvas to optimize upload speed and eliminate server size/mime issues
+            const imgObj = new Image();
+            imgObj.onload = function() {
+                const maxDim = 1600;
+                let width = imgObj.width;
+                let height = imgObj.height;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imgObj, 0, 0, width, height);
+
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                if (base64Input) {
+                    base64Input.value = compressedBase64;
+                }
+                if (label) {
+                    label.textContent = file.name || 'foto_bukti.jpg';
+                }
+            };
+            imgObj.src = rawDataUrl;
         };
         reader.readAsDataURL(file);
-    };
-
-    window.handleCameraCapture = function(event, mainInputId, previewId, labelId) {
-        const file = event.target.files[0];
-        if (!file) { return; }
-        const mainInput = document.getElementById(mainInputId);
-        const camInput = event.target;
-
-        if (mainInput && event.target.files) {
-            try {
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                mainInput.files = dataTransfer.files;
-            } catch (e) {
-                camInput.name = 'photo';
-                mainInput.name = '';
-            }
-        }
-        window.previewPhoto(event, previewId, labelId);
     };
 
     window.togglePhotoMenu = function(event, menuId) {
@@ -970,19 +992,16 @@
         if (input) { input.click(); }
     };
 
-    window.clearPhoto = function(mainInputId, previewId, labelId, camInputId) {
+    window.clearPhoto = function(mainInputId, previewId, labelId, camInputId, base64InputId) {
         const input = document.getElementById(mainInputId);
         const camInput = camInputId ? document.getElementById(camInputId) : null;
+        const base64Input = base64InputId ? document.getElementById(base64InputId) : null;
         const preview = document.getElementById(previewId);
         const label = document.getElementById(labelId);
-        if (input) { 
-            input.value = ''; 
-            input.name = 'photo';
-        }
-        if (camInput) { 
-            camInput.value = ''; 
-            camInput.removeAttribute('name');
-        }
+
+        if (input) { input.value = ''; }
+        if (camInput) { camInput.value = ''; }
+        if (base64Input) { base64Input.value = ''; }
         if (preview) { preview.classList.add('hidden'); }
         if (label) { label.textContent = 'Klik tanda plus (+) untuk unggah bukti...'; }
     };
@@ -992,22 +1011,24 @@
     let activeMainInputId = null;
     let activePreviewId = null;
     let activeLabelId = null;
+    let activeBase64InputId = null;
 
-    window.openLiveCamera = async function(mainInputId, previewId, labelId, menuId) {
+    window.openLiveCamera = async function(mainInputId, previewId, labelId, menuId, base64InputId) {
         if (menuId) {
             const menu = document.getElementById(menuId);
-            if (menu) menu.classList.add('hidden');
+            if (menu) { menu.classList.add('hidden'); }
         }
 
         activeMainInputId = mainInputId;
         activePreviewId = previewId;
         activeLabelId = labelId;
+        activeBase64InputId = base64InputId;
 
         const camInputId = mainInputId.replace('photo', 'camera');
         const camInput = document.getElementById(camInputId);
 
         // On HTTP internal server (non-HTTPS), modern browsers block WebRTC getUserMedia.
-        // Synchronously launch device camera directly so it opens immediately without error!
+        // Synchronously launch device native camera input directly so it opens immediately!
         const isSecure = (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
 
@@ -1016,7 +1037,7 @@
                 camInput.click();
             } else {
                 const mainInput = document.getElementById(mainInputId);
-                if (mainInput) mainInput.click();
+                if (mainInput) { mainInput.click(); }
             }
             return;
         }
@@ -1026,11 +1047,10 @@
         const video = document.getElementById('camera-video');
         const loading = document.getElementById('camera-loading');
         const errorBox = document.getElementById('camera-error');
-        const errorMsg = document.getElementById('camera-error-msg');
 
-        if (modal) modal.classList.remove('hidden');
-        if (loading) loading.classList.remove('hidden');
-        if (errorBox) errorBox.classList.add('hidden');
+        if (modal) { modal.classList.remove('hidden'); }
+        if (loading) { loading.classList.remove('hidden'); }
+        if (errorBox) { errorBox.classList.add('hidden'); }
 
         try {
             if (currentCameraStream) {
@@ -1056,7 +1076,7 @@
             video.srcObject = stream;
             await video.play();
 
-            if (loading) loading.classList.add('hidden');
+            if (loading) { loading.classList.add('hidden'); }
         } catch (err) {
             console.warn('WebRTC modal unavailable, opening native camera fallback:', err);
             window.closeCameraModal();
@@ -1064,14 +1084,14 @@
                 camInput.click();
             } else {
                 const mainInput = document.getElementById(mainInputId);
-                if (mainInput) mainInput.click();
+                if (mainInput) { mainInput.click(); }
             }
         }
     };
 
     window.closeCameraModal = function() {
         const modal = document.getElementById('camera-capture-modal');
-        if (modal) modal.classList.add('hidden');
+        if (modal) { modal.classList.add('hidden'); }
 
         if (currentCameraStream) {
             currentCameraStream.getTracks().forEach(t => t.stop());
@@ -1079,7 +1099,7 @@
         }
 
         const video = document.getElementById('camera-video');
-        if (video) video.srcObject = null;
+        if (video) { video.srcObject = null; }
     };
 
     window.captureCameraSnapshot = function() {
@@ -1090,53 +1110,50 @@
             return;
         }
 
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        const maxDim = 1600;
+        let width = video.videoWidth || 1280;
+        let height = video.videoHeight || 720;
+        if (width > maxDim || height > maxDim) {
+            if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+            } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+            }
+        }
 
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, width, height);
 
-        canvas.toBlob((blob) => {
-            if (!blob) {
-                window.closeCameraModal();
-                return;
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        const filename = `kamera_bbm_${timestamp}.jpg`;
+
+        if (activeBase64InputId) {
+            const base64Input = document.getElementById(activeBase64InputId);
+            if (base64Input) { base64Input.value = compressedBase64; }
+        }
+
+        if (activePreviewId) {
+            const preview = document.getElementById(activePreviewId);
+            if (preview) {
+                preview.classList.remove('hidden');
+                const img = preview.querySelector('.preview-img');
+                const fname = preview.querySelector('.preview-filename');
+                if (img) { img.src = compressedBase64; }
+                if (fname) { fname.textContent = filename; }
             }
+        }
 
-            const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-            const filename = `kamera_bbm_${timestamp}.jpg`;
-            const file = new File([blob], filename, { type: 'image/jpeg' });
+        if (activeLabelId) {
+            const label = document.getElementById(activeLabelId);
+            if (label) { label.textContent = filename; }
+        }
 
-            if (activeMainInputId) {
-                const mainInput = document.getElementById(activeMainInputId);
-                if (mainInput) {
-                    try {
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        mainInput.files = dataTransfer.files;
-                    } catch (e) {
-                        console.warn('DataTransfer error:', e);
-                    }
-                }
-            }
-
-            if (activePreviewId) {
-                const preview = document.getElementById(activePreviewId);
-                if (preview) {
-                    preview.classList.remove('hidden');
-                    const img = preview.querySelector('.preview-img');
-                    const fname = preview.querySelector('.preview-filename');
-                    if (img) img.src = canvas.toDataURL('image/jpeg', 0.9);
-                    if (fname) fname.textContent = filename;
-                }
-            }
-
-            if (activeLabelId) {
-                const label = document.getElementById(activeLabelId);
-                if (label) label.textContent = filename;
-            }
-
-            window.closeCameraModal();
-        }, 'image/jpeg', 0.9);
+        window.closeCameraModal();
     };
 
     // Close any open popover when clicking anywhere outside
