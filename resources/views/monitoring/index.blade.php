@@ -635,10 +635,38 @@
             </div>
 
             <!-- Error state -->
-            <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 p-6 text-center hidden">
-                <p class="text-rose-400 text-xs font-semibold mb-1" id="camera-error-msg">Tidak dapat mengakses kamera.</p>
-                <p class="text-[11px] text-slate-400 mb-4">Pastikan izin kamera diizinkan pada browser Anda.</p>
-                <button type="button" onclick="closeCameraModal()" class="px-4 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700">Tutup</button>
+            <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 p-5 text-center hidden overflow-y-auto">
+                <svg class="w-8 h-8 text-rose-400 mb-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+                <p class="text-rose-400 text-xs font-bold mb-1" id="camera-error-msg">Kamera tidak dapat diakses.</p>
+                <p class="text-[10px] text-slate-400 mb-3 leading-relaxed">Browser memblokir akses kamera pada koneksi HTTP.<br>Gunakan tombol di bawah untuk memilih foto.</p>
+
+                {{-- Action buttons --}}
+                <button type="button" id="camera-error-file-btn"
+                    class="w-full max-w-[220px] px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white text-xs font-bold shadow shadow-cyan-600/30 transition flex items-center justify-center gap-2 mb-2">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                    </svg>
+                    Pilih File / Foto
+                </button>
+
+                {{-- Chrome flags tip --}}
+                <button type="button" onclick="document.getElementById('chrome-tip').classList.toggle('hidden')"
+                    class="text-[10px] text-slate-500 hover:text-cyan-400 underline underline-offset-2 mb-2 transition">
+                    Cara aktifkan kamera Chrome di jaringan internal →
+                </button>
+                <div id="chrome-tip" class="hidden text-left bg-slate-900 border border-slate-700 rounded-xl p-3 max-w-xs text-[10px] text-slate-300 leading-relaxed mb-3 space-y-1">
+                    <p class="font-bold text-cyan-400 mb-1">Aktifkan kamera di Chrome (HTTP):</p>
+                    <p>1. Buka tab baru di Chrome, ketik:</p>
+                    <p class="font-mono bg-slate-800 px-2 py-1 rounded text-[9px] text-amber-300 select-all break-all">chrome://flags/#unsafely-treat-insecure-origin-as-secure</p>
+                    <p>2. Masukkan alamat ini di kolom teks:</p>
+                    <p class="font-mono bg-slate-800 px-2 py-1 rounded text-[9px] text-emerald-300 select-all break-all">{{ url('/') }}</p>
+                    <p>3. Set ke <strong>Enabled</strong> → klik <strong>Relaunch</strong>.</p>
+                    <p class="text-slate-500 text-[9px] mt-1">*Hanya untuk browser ini di komputer ini.</p>
+                </div>
+
+                <button type="button" onclick="closeCameraModal()" class="text-[10px] text-slate-500 hover:text-slate-300 transition">Tutup</button>
             </div>
         </div>
 
@@ -1026,14 +1054,38 @@
 
         const camInputId = mainInputId.replace('photo', 'camera');
         const camInput = document.getElementById(camInputId);
+        const mainInput = document.getElementById(mainInputId);
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Open live interactive Camera Modal
+        // ── Mobile: langsung buka kamera native device (capture="environment") ──
+        if (isMobile && camInput) {
+            camInput.click();
+            return;
+        }
+
+        // ── Desktop: coba WebRTC live camera modal ──
         const modal = document.getElementById('camera-capture-modal');
         const video = document.getElementById('camera-video');
         const loading = document.getElementById('camera-loading');
         const errorBox = document.getElementById('camera-error');
         const errorMsg = document.getElementById('camera-error-msg');
+        const errorFileBtn = document.getElementById('camera-error-file-btn');
+
+        // Helper: tampilkan error & pasang tombol pilih file
+        const showError = (msg) => {
+            if (loading) { loading.classList.add('hidden'); }
+            if (errorBox) { errorBox.classList.remove('hidden'); }
+            if (errorMsg) { errorMsg.textContent = msg; }
+            if (errorFileBtn) {
+                errorFileBtn.onclick = () => {
+                    window.closeCameraModal();
+                    if (mainInput) { mainInput.click(); }
+                };
+            }
+            // Reset chrome-tip setiap kali error ditampilkan
+            const tip = document.getElementById('chrome-tip');
+            if (tip) { tip.classList.add('hidden'); }
+        };
 
         if (modal) { modal.classList.remove('hidden'); }
         if (loading) { loading.classList.remove('hidden'); }
@@ -1069,35 +1121,13 @@
                 return;
             } catch (err) {
                 console.warn('getUserMedia error:', err);
-                if (isMobile && camInput) {
-                    window.closeCameraModal();
-                    camInput.click();
-                    return;
-                }
-                if (loading) { loading.classList.add('hidden'); }
-                if (errorBox) {
-                    errorBox.classList.remove('hidden');
-                    if (errorMsg) {
-                        errorMsg.textContent = 'Kamera tidak dapat diakses (' + (err.name || 'Izin ditolak') + '). Pastikan izin kamera aktif pada browser.';
-                    }
-                }
+                showError('Kamera tidak dapat diakses (' + (err.name || 'Izin ditolak') + '). Pastikan izin kamera aktif.');
                 return;
             }
         }
 
-        // If navigator.mediaDevices is blocked by browser on HTTP
-        if (isMobile && camInput) {
-            window.closeCameraModal();
-            camInput.click();
-        } else {
-            if (loading) { loading.classList.add('hidden'); }
-            if (errorBox) {
-                errorBox.classList.remove('hidden');
-                if (errorMsg) {
-                    errorMsg.innerHTML = 'Browser membatasi akses video langsung pada koneksi HTTP non-HTTPS.<br><span class="text-slate-300 font-normal mt-1 block">Gunakan Smartphone untuk langsung membuka kamera bawaan, atau pilih file foto dari komputer.</span>';
-                }
-            }
-        }
+        // navigator.mediaDevices tidak tersedia (HTTP non-localhost di desktop)
+        showError('Browser membatasi akses kamera pada koneksi HTTP. Gunakan "Pilih File / Foto" di bawah.');
     };
 
     window.closeCameraModal = function() {

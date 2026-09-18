@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Tank;
 use App\Models\TankTelemetry;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -133,7 +132,7 @@ class ReportController extends Controller
                         $log->source,
                         $log->device_id ?? '-',
                         $log->notes ?? '-',
-                        $log->photo_path ? Storage::disk('public')->url($log->photo_path) : '-',
+                        $log->photo_path ? asset('storage/'.$log->photo_path) : '-',
                         $log->created_at->format('Y-m-d H:i:s'),
                     ]);
                 }
