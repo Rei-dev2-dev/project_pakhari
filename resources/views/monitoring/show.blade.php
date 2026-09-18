@@ -32,15 +32,15 @@
 @section('content')
 <div class="space-y-6">
     <!-- Top Action Bar -->
-    <div class="flex items-center justify-between">
-        <a href="{{ route('monitoring.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold transition">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <a href="{{ route('monitoring.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold transition w-fit">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             <span>Kembali ke Semua Tangki</span>
         </a>
 
-        <div class="flex items-center space-x-2 text-xs text-slate-400 font-mono">
+        <div class="flex items-center space-x-2 text-xs text-slate-400 font-mono flex-wrap">
             <span>Dimensi:</span>
             <span class="text-slate-200">P: {{ number_format($tank->length_cm ?? 200, 0) }}cm &bull; L: {{ number_format($tank->width_cm, 0) }}cm &bull; T: {{ number_format($tank->height_cm, 0) }}cm &bull; D: {{ number_format($tank->diameter_cm, 0) }}cm</span>
         </div>
