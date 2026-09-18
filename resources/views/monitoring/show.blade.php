@@ -85,11 +85,11 @@
                 <!-- Three.js Canvas Container -->
                 <div id="threejs-container" class="w-full h-full flex-1 cursor-grab active:cursor-grabbing"></div>
 
-                <!-- Floating HUD Water Overlay -->
+                <!-- Floating HUD BBM Solar Overlay -->
                 <div class="absolute bottom-4 left-4 z-10 pointer-events-none">
                     <div class="bg-slate-950/85 backdrop-blur-md px-4 py-3 rounded-2xl border border-slate-800 shadow-2xl flex items-center space-x-4">
                         <div class="w-3 h-12 bg-slate-800 rounded-full overflow-hidden p-0.5 flex flex-col justify-end">
-                            <div id="floatingLevelBar" class="w-full bg-cyan-400 rounded-full transition-all duration-300" style="height: {{ $latest->percentage ?? 35 }}%;"></div>
+                            <div id="floatingLevelBar" class="w-full bg-gradient-to-t from-amber-500 to-yellow-400 rounded-full transition-all duration-300" style="height: {{ $latest->percentage ?? 35 }}%;"></div>
                         </div>
                         <div>
                             <div class="flex items-baseline space-x-1">
@@ -99,7 +99,7 @@
                             <div class="flex items-center space-x-2 text-[11px] text-slate-400">
                                 <span id="floatingHeight">Tinggi: {{ number_format($latest->height_cm ?? 24.5, 1) }} cm</span>
                                 <span>&bull;</span>
-                                <span class="text-cyan-400 font-bold" id="floatingPercentage">{{ number_format($latest->percentage ?? 35.0, 1) }}%</span>
+                                <span class="text-amber-400 font-bold" id="floatingPercentage">{{ number_format($latest->percentage ?? 35.0, 1) }}%</span>
                             </div>
                         </div>
                     </div>
@@ -116,7 +116,7 @@
             <!-- 4 Metric Cards -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
-                    <span class="text-[11px] text-slate-400 block font-medium">Volume Air</span>
+                    <span class="text-[11px] text-slate-400 block font-medium">Volume BBM (Solar)</span>
                     <div class="flex items-baseline gap-1 mt-1">
                         <span class="text-lg font-bold font-mono text-white" id="cardVolume">{{ number_format($latest->volume_liters ?? 0, 1) }}</span>
                         <span class="text-xs text-slate-400">L</span>
@@ -126,13 +126,13 @@
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                     <span class="text-[11px] text-slate-400 block font-medium">Persentase</span>
                     <div class="flex items-baseline gap-1 mt-1">
-                        <span class="text-lg font-bold font-mono text-cyan-400" id="cardPercentage">{{ number_format($latest->percentage ?? 0, 1) }}</span>
-                        <span class="text-xs text-cyan-400">%</span>
+                        <span class="text-lg font-bold font-mono text-amber-400" id="cardPercentage">{{ number_format($latest->percentage ?? 0, 1) }}</span>
+                        <span class="text-xs text-amber-400">%</span>
                     </div>
                 </div>
 
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
-                    <span class="text-[11px] text-slate-400 block font-medium">Ketinggian Air</span>
+                    <span class="text-[11px] text-slate-400 block font-medium">Ketinggian BBM (Solar)</span>
                     <div class="flex items-baseline gap-1 mt-1">
                         <span class="text-lg font-bold font-mono text-white" id="cardHeight">{{ number_format($latest->height_cm ?? 0, 1) }}</span>
                         <span class="text-xs text-slate-400">cm</span>
@@ -332,11 +332,11 @@
     dirLight1.castShadow = true;
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 1.4);
+    const dirLight2 = new THREE.DirectionalLight(0xfcd34d, 1.4);
     dirLight2.position.set(-4, 4, -4);
     scene.add(dirLight2);
 
-    const pointLightBottom = new THREE.PointLight(0x0ea5e9, 1.2, 4);
+    const pointLightBottom = new THREE.PointLight(0xf59e0b, 1.4, 4);
     pointLightBottom.position.set(0, 0.3, 0);
     scene.add(pointLightBottom);
 
@@ -351,18 +351,18 @@
     pedestal.position.y = -0.015;
     scene.add(pedestal);
 
-    // --- WATER MESH (Single Cylinder + Dynamic Clipping Plane) ---
+    // --- SOLAR / DIESEL FUEL MESH (Single Cylinder + Dynamic Clipping Plane) ---
     const waterClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), WATER_MIN_Y);
     const waterMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x0284c7,
-        emissive: 0x0369a1,
-        emissiveIntensity: 0.2,
+        color: 0xf59e0b,
+        emissive: 0xd97706,
+        emissiveIntensity: 0.25,
         roughness: 0.08,
         metalness: 0.05,
-        transmission: 0.55,
-        ior: 1.333,
+        transmission: 0.60,
+        ior: 1.45,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.88,
         clippingPlanes: [waterClipPlane],
         clipShadows: true,
         side: THREE.DoubleSide,
@@ -377,15 +377,15 @@
     waterMesh.position.set(0, WATER_CENTER_Y, TANK_Z);
     waterGroup.add(waterMesh);
 
-    // Top Flat Surface Cap
+    // Top Flat Surface Cap (Solar Meniscus)
     const surfaceMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x38bdf8,
-        emissive: 0x0284c7,
-        emissiveIntensity: 0.25,
+        color: 0xfde047,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.30,
         roughness: 0.05,
-        metalness: 0.1,
+        metalness: 0.08,
         transparent: true,
-        opacity: 0.92,
+        opacity: 0.95,
         side: THREE.DoubleSide,
         depthWrite: false
     });
@@ -398,13 +398,170 @@
     waterGroup.add(surfaceMesh);
     scene.add(waterGroup);
 
-    // Inflow stream
+    // Inflow stream (Solar filling stream)
     const inflowGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.85, 16);
     inflowGeo.translate(0, -0.425, 0);
-    const inflowMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.0 });
+    const inflowMat = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.0 });
     const inflow = new THREE.Mesh(inflowGeo, inflowMat);
     inflow.position.set(-0.160, 1.53, TANK_Z);
     scene.add(inflow);
+
+    // --- VERTICAL CENTIMETER (CM) RULER GAUGE (RED, CENTERED, HIGH-RES CANVAS) ---
+    function createRulerTexture(maxHeightCm) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 2048;
+        const ctx = canvas.getContext('2d');
+
+        // Completely transparent background
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const padTop = 90;
+        const padBottom = 90;
+        const drawHeight = canvas.height - padTop - padBottom;
+        const lineX = 400; // EXACT CENTER of the 800px width!
+
+        // Center vertical scale axis line (BRIGHT RED)
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(lineX, padTop);
+        ctx.lineTo(lineX, canvas.height - padBottom);
+        ctx.stroke();
+
+        // Dynamic tick calculation depending on maxHeightCm
+        const stepMajor = maxHeightCm <= 30 ? 5 : (maxHeightCm <= 80 ? 10 : 20);
+        const stepMinor = stepMajor === 5 ? 1 : (stepMajor === 10 ? 2 : 5);
+
+        for (let cm = 0; cm <= maxHeightCm; cm += stepMinor) {
+            const ratio = cm / maxHeightCm;
+            const y = (canvas.height - padBottom) - (ratio * drawHeight);
+            const isMajor = (cm % stepMajor === 0) || (Math.abs(cm - maxHeightCm) < 0.01);
+            const isMedium = (!isMajor) && (cm % (stepMajor / 2) === 0);
+
+            ctx.beginPath();
+            if (isMajor) {
+                // Major tick line (Bright Red)
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 9;
+                ctx.moveTo(lineX - 50, y);
+                ctx.lineTo(lineX + 50, y);
+                ctx.stroke();
+
+                // Extra Large Bold Numbers with Dark Outline
+                const labelText = `${cm} cm`;
+                ctx.font = '900 66px "JetBrains Mono", monospace';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                
+                // Dark stroke for extreme crispness
+                ctx.strokeStyle = '#020617';
+                ctx.lineWidth = 12;
+                ctx.lineJoin = 'round';
+                ctx.miterLimit = 2;
+                ctx.strokeText(labelText, lineX + 65, y);
+
+                // Bright text fill
+                ctx.fillStyle = (cm === 0 || Math.abs(cm - maxHeightCm) < 0.01) ? '#fde047' : '#ffffff';
+                ctx.fillText(labelText, lineX + 65, y);
+            } else if (isMedium) {
+                // Medium tick line (Red accent)
+                ctx.strokeStyle = '#f87171';
+                ctx.lineWidth = 5;
+                ctx.moveTo(lineX - 28, y);
+                ctx.lineTo(lineX + 28, y);
+                ctx.stroke();
+            } else {
+                // Minor tick line
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.70)';
+                ctx.lineWidth = 3;
+                ctx.moveTo(lineX - 15, y);
+                ctx.lineTo(lineX + 15, y);
+                ctx.stroke();
+            }
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return texture;
+    }
+
+    const rulerTexture = createRulerTexture(MAX_HEIGHT_CM);
+    const rulerMaterial = new THREE.MeshBasicMaterial({
+        map: rulerTexture,
+        transparent: true,
+        opacity: 0.98,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+
+    const rulerGeo = new THREE.PlaneGeometry(0.42, WATER_FILL_RANGE);
+
+    // 1. Front circular cap ruler (facing outward -X, exactly centered on circle Z=0)
+    const frontRuler = new THREE.Mesh(rulerGeo, rulerMaterial);
+    frontRuler.position.set(-1.008, WATER_CENTER_Y, 0.000);
+    frontRuler.rotation.y = -Math.PI / 2;
+    scene.add(frontRuler);
+
+    // 2. Back circular cap ruler (facing outward +X, exactly centered on circle Z=0)
+    const backRuler = new THREE.Mesh(rulerGeo, rulerMaterial);
+    backRuler.position.set(1.008, WATER_CENTER_Y, 0.000);
+    backRuler.rotation.y = Math.PI / 2;
+    scene.add(backRuler);
+
+    // --- DYNAMIC CURRENT LEVEL INDICATOR (DEPAN & BELAKANG, TRANSPARENT, NO BOX) ---
+    const levelBadgeCanvas = document.createElement('canvas');
+    levelBadgeCanvas.width = 640;
+    levelBadgeCanvas.height = 120;
+    const levelBadgeCtx = levelBadgeCanvas.getContext('2d');
+    const levelBadgeTexture = new THREE.CanvasTexture(levelBadgeCanvas);
+    levelBadgeTexture.minFilter = THREE.LinearFilter;
+    levelBadgeTexture.magFilter = THREE.LinearFilter;
+
+    function updateLevelBadge(heightCm, pct) {
+        // Completely transparent background (no background box)
+        levelBadgeCtx.clearRect(0, 0, levelBadgeCanvas.width, levelBadgeCanvas.height);
+
+        // Text format placed on the left side: "[height] cm ([pct]%) —"
+        const labelText = `${heightCm} cm (${pct}%) —`;
+        levelBadgeCtx.font = '900 52px "JetBrains Mono", monospace';
+        levelBadgeCtx.textAlign = 'right';
+        levelBadgeCtx.textBaseline = 'middle';
+        
+        // High contrast dark stroke outline for extreme clarity
+        levelBadgeCtx.strokeStyle = '#020617';
+        levelBadgeCtx.lineWidth = 12;
+        levelBadgeCtx.lineJoin = 'round';
+        levelBadgeCtx.miterLimit = 2;
+        levelBadgeCtx.strokeText(labelText, 620, 60);
+
+        // Bright solar yellow text fill
+        levelBadgeCtx.fillStyle = '#fde047';
+        levelBadgeCtx.fillText(labelText, 620, 60);
+
+        levelBadgeTexture.needsUpdate = true;
+    }
+
+    const levelBadgeMat = new THREE.MeshBasicMaterial({
+        map: levelBadgeTexture,
+        transparent: true,
+        opacity: 0.98,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+
+    // 1. Front Badge (facing outward -X, placed on the left side -Z)
+    const levelBadgePlaneFront = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.072), levelBadgeMat);
+    levelBadgePlaneFront.position.set(-1.011, WATER_MIN_Y, -0.19);
+    levelBadgePlaneFront.rotation.y = -Math.PI / 2;
+    scene.add(levelBadgePlaneFront);
+
+    // 2. Back Badge (facing outward +X, placed on the left side when viewed from back +Z)
+    const levelBadgePlaneBack = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.072), levelBadgeMat);
+    levelBadgePlaneBack.position.set(1.011, WATER_MIN_Y, 0.19);
+    levelBadgePlaneBack.rotation.y = Math.PI / 2;
+    scene.add(levelBadgePlaneBack);
 
     // --- MATERIALS FOR TANK GLASS/SOLID ---
     const glassTankMaterial = new THREE.MeshPhysicalMaterial({
@@ -502,7 +659,7 @@
     }
     animate();
 
-    // --- WATER VISUAL UPDATE ---
+    // --- WATER / SOLAR VISUAL UPDATE ---
     function updateWaterVisual(liters) {
         const clamped = Math.max(0, Math.min(MAX_LITERS, liters));
         const ratio   = clamped / MAX_LITERS;
@@ -510,12 +667,24 @@
 
         waterClipPlane.constant = currentHeight;
 
+        // Update live position of dynamic level text badges (front & back)
+        levelBadgePlaneFront.position.y = currentHeight;
+        levelBadgePlaneBack.position.y = currentHeight;
+
+        const estHeightCm = (ratio * MAX_HEIGHT_CM).toFixed(1);
+        const estPct = (ratio * 100).toFixed(1);
+        updateLevelBadge(estHeightCm, estPct);
+
         if (clamped <= 0.05) {
             waterMesh.visible = false;
             surfaceMesh.visible = false;
+            levelBadgePlaneFront.visible = false;
+            levelBadgePlaneBack.visible = false;
         } else {
             waterMesh.visible = true;
             surfaceMesh.visible = true;
+            levelBadgePlaneFront.visible = true;
+            levelBadgePlaneBack.visible = true;
             surfaceMesh.position.y = currentHeight;
 
             const dy = currentHeight - WATER_CENTER_Y;
@@ -526,30 +695,29 @@
             surfaceMesh.scale.set(1.0, 1.0, scaledWidthZ);
         }
 
-        // Color warning at high/low levels
+        // Solar / Diesel color adjustments based on tank capacity states
         if (clamped >= MAX_LITERS * 0.95) {
             waterMaterial.color.setHex(0xf43f5e);
             waterMaterial.emissive.setHex(0xbe123c);
             surfaceMaterial.color.setHex(0xfb7185);
             surfaceMaterial.emissive.setHex(0xbe123c);
         } else if (clamped <= MAX_LITERS * 0.20) {
-            waterMaterial.color.setHex(0xf59e0b);
-            waterMaterial.emissive.setHex(0xb45309);
-            surfaceMaterial.color.setHex(0xfcd34d);
-            surfaceMaterial.emissive.setHex(0xb45309);
+            waterMaterial.color.setHex(0xf97316);
+            waterMaterial.emissive.setHex(0xc2410c);
+            surfaceMaterial.color.setHex(0xfb923c);
+            surfaceMaterial.emissive.setHex(0xc2410c);
         } else {
-            waterMaterial.color.setHex(0x0284c7);
-            waterMaterial.emissive.setHex(0x0369a1);
-            surfaceMaterial.color.setHex(0x38bdf8);
-            surfaceMaterial.emissive.setHex(0x0284c7);
+            waterMaterial.color.setHex(0xf59e0b);
+            waterMaterial.emissive.setHex(0xd97706);
+            surfaceMaterial.color.setHex(0xfde047);
+            surfaceMaterial.emissive.setHex(0xf59e0b);
         }
 
         // Floating HUD updates
         document.getElementById('floatingLiters').textContent = clamped.toFixed(1);
-        const estHeightCm = (ratio * MAX_HEIGHT_CM).toFixed(1);
         document.getElementById('floatingHeight').textContent = `Tinggi: ${estHeightCm} cm`;
-        document.getElementById('floatingPercentage').textContent = `${(ratio * 100).toFixed(1)}%`;
-        document.getElementById('floatingLevelBar').style.height = `${(ratio * 100).toFixed(1)}%`;
+        document.getElementById('floatingPercentage').textContent = `${estPct}%`;
+        document.getElementById('floatingLevelBar').style.height = `${estPct}%`;
     }
 
     // --- CONTROLS & LISTENERS ---

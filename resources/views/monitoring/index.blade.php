@@ -115,7 +115,7 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <!-- Ketinggian -->
                                 <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5">
-                                    <span class="text-[10px] text-slate-400 block font-medium">Ketinggian Air</span>
+                                    <span class="text-[10px] text-slate-400 block font-medium">Ketinggian BBM (Solar)</span>
                                     <span class="text-xs font-bold text-slate-200 font-mono">{{ number_format($h, 1) }} cm</span>
                                     <span class="text-[9px] text-slate-500 block font-mono">Max: {{ number_format($tank->height_cm, 0) }}cm</span>
                                 </div>
@@ -735,14 +735,14 @@
 
         const waterClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), currentHeight);
         
-        let waterColor = 0x0284c7;
-        let waterEmissive = 0x0369a1;
+        let waterColor = 0xf59e0b;
+        let waterEmissive = 0xd97706;
         if (ratio >= 0.95) {
             waterColor = 0xf43f5e;
             waterEmissive = 0xbe123c;
         } else if (ratio <= 0.20 && volume > 0) {
-            waterColor = 0xf59e0b;
-            waterEmissive = 0xb45309;
+            waterColor = 0xf97316;
+            waterEmissive = 0xc2410c;
         }
 
         const waterMaterial = new THREE.MeshPhysicalMaterial({
