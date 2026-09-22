@@ -130,13 +130,9 @@ class MonitoringController extends Controller
         $inputHeight = (float) $validated['height_cm'];
         $type = $validated['type'];
 
-        // Handle photo upload if present (Supports standard file upload, camera input, and base64 string)
+        // Handle photo upload if present (Supports base64 string from canvas, camera input, and file upload)
         $photoPath = null;
-        if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $photoPath = $request->file('photo')->store('telemetry_proofs', 'public');
-        } elseif ($request->hasFile('photo_cam') && $request->file('photo_cam')->isValid()) {
-            $photoPath = $request->file('photo_cam')->store('telemetry_proofs', 'public');
-        } elseif (! empty($validated['photo_base64'])) {
+        if (! empty($validated['photo_base64'])) {
             $base64Data = $validated['photo_base64'];
             $ext = 'jpg';
             if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $typeMatch)) {
@@ -152,6 +148,10 @@ class MonitoringController extends Controller
                 Storage::disk('public')->put('telemetry_proofs/'.$fileName, $decoded);
                 $photoPath = 'telemetry_proofs/'.$fileName;
             }
+        } elseif ($request->hasFile('photo') && $request->file('photo')->isValid()) {
+            $photoPath = $request->file('photo')->store('telemetry_proofs', 'public');
+        } elseif ($request->hasFile('photo_cam') && $request->file('photo_cam')->isValid()) {
+            $photoPath = $request->file('photo_cam')->store('telemetry_proofs', 'public');
         }
 
         // Get latest telemetry to know initial state

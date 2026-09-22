@@ -957,6 +957,11 @@
         reader.onload = function(e) {
             const rawDataUrl = e.target.result;
             
+            // Set fallback immediately so fast form submit always has photo data
+            if (base64Input) {
+                base64Input.value = rawDataUrl;
+            }
+
             // Show immediate preview
             if (preview) {
                 preview.classList.remove('hidden');
