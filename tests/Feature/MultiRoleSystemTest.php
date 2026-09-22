@@ -340,7 +340,7 @@ class MultiRoleSystemTest extends TestCase
 
         $response = $this->actingAs($staff)->get('/laporan/export');
         $response->assertOk();
-        $this->assertTrue(str_contains($response->headers->get('content-type'), 'text/csv'));
+        $this->assertTrue(str_contains($response->headers->get('content-type'), 'spreadsheetml'));
     }
 
     public function test_operator_can_record_pemasukan_with_photo_file(): void

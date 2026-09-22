@@ -6,7 +6,13 @@ use App\Models\Tank;
 use App\Models\TankTelemetry;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\Response;
 
 class ReportController extends Controller
 {
@@ -55,9 +61,9 @@ class ReportController extends Controller
     }
 
     /**
-     * Export telemetry logs to Excel-compatible CSV format.
+     * Export telemetry logs to Excel (.xlsx) with embedded photo thumbnails.
      */
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): Response
     {
         $query = TankTelemetry::with('tank')->latest();
 
@@ -83,62 +89,149 @@ class ReportController extends Controller
             $query->where('source', self::SOURCE_MAP[$jenis]);
         }
 
-        $fileName = 'Laporan_Monitoring_'.$tankName.'_'.now()->format('Ymd_His').'.csv';
+        $fileName = 'Laporan_Monitoring_'.$tankName.'_'.now()->format('Ymd_His').'.xlsx';
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
+        // ── Build Spreadsheet ──────────────────────────────────────────────────
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Laporan BBM');
+
+        // ── Header row ─────────────────────────────────────────────────────────
+        $columns = [
+            'A' => 'No',
+            'B' => 'Nama Tangki',
+            'C' => 'Kode Tangki',
+            'D' => 'Kapasitas (L)',
+            'E' => 'Volume (L)',
+            'F' => 'Persentase (%)',
+            'G' => 'Ketinggian (cm)',
+            'H' => 'Status',
+            'I' => 'Jenis Transaksi',
+            'J' => 'Device ID',
+            'K' => 'Catatan',
+            'L' => 'Foto Bukti',
+            'M' => 'Waktu',
         ];
 
-        return response()->stream(function () use ($query) {
-            $handle = fopen('php://output', 'w');
+        foreach ($columns as $col => $label) {
+            $sheet->setCellValue($col.'1', $label);
+        }
 
-            // UTF-8 BOM for Excel compatibility (ensures Indonesian accents and special characters render cleanly)
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+        $sheet->getStyle('A1:M1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1E3A5F'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '4A90D9'],
+                ],
+            ],
+        ]);
 
-            // CSV Column Headers
-            fputcsv($handle, [
-                'No',
-                'Nama Tangki',
-                'Kode Tangki',
-                'Kapasitas Maksimal (Liter)',
-                'Volume (Liter)',
-                'Persentase (%)',
-                'Ketinggian (cm)',
-                'Status',
-                'Jenis Transaksi',
-                'Device ID',
-                'Catatan',
-                'Foto Bukti (URL)',
-                'Waktu',
-            ]);
+        $sheet->getRowDimension(1)->setRowHeight(24);
 
-            $index = 1;
-            $query->chunk(200, function ($records) use ($handle, &$index) {
-                foreach ($records as $log) {
-                    $tank = $log->tank;
-                    fputcsv($handle, [
-                        $index++,
-                        $tank ? $tank->name : 'Tangki Utama',
-                        $tank ? $tank->code : 'TNK-01',
-                        $tank ? number_format($tank->capacity_liters, 1) : '100.0',
-                        number_format($log->volume_liters, 2),
-                        number_format($log->percentage, 2).'%',
-                        number_format($log->height_cm, 2).' cm',
-                        ucfirst(str_replace('_', ' ', $log->status)),
-                        $log->source,
-                        $log->device_id ?? '-',
-                        $log->notes ?? '-',
-                        $log->photo_path ? asset('storage/'.$log->photo_path) : '-',
-                        $log->created_at->format('Y-m-d H:i:s'),
-                    ]);
+        // Column widths
+        foreach (['A' => 5, 'B' => 22, 'C' => 12, 'D' => 14, 'E' => 12, 'F' => 14, 'G' => 14, 'H' => 14, 'I' => 18, 'J' => 24, 'K' => 32, 'L' => 20, 'M' => 20] as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
+
+        // ── Data rows ──────────────────────────────────────────────────────────
+        $records = $query->get();
+        $rowDataStyle = [
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D0D7E4'],
+                ],
+            ],
+        ];
+
+        $no = 1;
+        $rowIndex = 2;
+
+        foreach ($records as $log) {
+            $tank = $log->tank;
+
+            $sheet->setCellValue('A'.$rowIndex, $no++);
+            $sheet->setCellValue('B'.$rowIndex, $tank ? $tank->name : 'Tangki Utama');
+            $sheet->setCellValue('C'.$rowIndex, $tank ? $tank->code : 'TNK-01');
+            $sheet->setCellValue('D'.$rowIndex, $tank ? number_format($tank->capacity_liters, 1) : '100.0');
+            $sheet->setCellValue('E'.$rowIndex, number_format($log->volume_liters, 2));
+            $sheet->setCellValue('F'.$rowIndex, number_format($log->percentage, 2).'%');
+            $sheet->setCellValue('G'.$rowIndex, number_format($log->height_cm, 2).' cm');
+            $sheet->setCellValue('H'.$rowIndex, ucfirst(str_replace('_', ' ', $log->status)));
+            $sheet->setCellValue('I'.$rowIndex, $log->source);
+            $sheet->setCellValue('J'.$rowIndex, $log->device_id ?? '-');
+            $sheet->setCellValue('K'.$rowIndex, $log->notes ?? '-');
+            $sheet->setCellValue('M'.$rowIndex, $log->created_at->format('Y-m-d H:i:s'));
+
+            $sheet->getStyle('A'.$rowIndex.':M'.$rowIndex)->applyFromArray($rowDataStyle);
+            $sheet->getStyle('A'.$rowIndex)->getAlignment()->setHorizontal(
+                Alignment::HORIZONTAL_CENTER
+            );
+
+            // ── Embed photo thumbnail ──────────────────────────────────────────
+            $rowHeight = 20;
+
+            if ($log->photo_path) {
+                $physicalPath = storage_path('app/public/'.$log->photo_path);
+
+                if (file_exists($physicalPath)) {
+                    try {
+                        $imgType = @exif_imagetype($physicalPath);
+                        $supported = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP];
+
+                        if ($imgType && in_array($imgType, $supported)) {
+                            $drawing = new Drawing;
+                            $drawing->setName('Foto Bukti');
+                            $drawing->setDescription('Foto Bukti');
+                            $drawing->setPath($physicalPath);
+                            $drawing->setCoordinates('L'.$rowIndex);
+                            $drawing->setOffsetX(4);
+                            $drawing->setOffsetY(4);
+                            $drawing->setHeight(52);
+                            $drawing->setWorksheet($sheet);
+                            $rowHeight = 60;
+                        } else {
+                            $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
+                        }
+                    } catch (\Throwable) {
+                        $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
+                    }
+                } else {
+                    $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
                 }
-            });
+            } else {
+                $sheet->setCellValue('L'.$rowIndex, '-');
+            }
 
-            fclose($handle);
-        }, 200, $headers);
+            $sheet->getRowDimension($rowIndex)->setRowHeight($rowHeight);
+            $rowIndex++;
+        }
+
+        // Freeze top header row while scrolling
+        $sheet->freezePane('A2');
+
+        // ── Stream .xlsx to browser ────────────────────────────────────────────
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 }
