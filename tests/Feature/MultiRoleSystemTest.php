@@ -334,13 +334,28 @@ class MultiRoleSystemTest extends TestCase
         $responsePemakaian->assertSee('Catatan Pemakaian Khusus');
     }
 
-    public function test_can_export_report_to_excel_csv(): void
+    public function test_only_admin_and_superadmin_can_export_report_to_excel(): void
     {
         $staff = User::where('username', 'Renaldi')->first();
+        $admin = User::where('username', 'admin')->first();
+        $superadmin = User::where('username', 'Daniel')->first();
 
-        $response = $this->actingAs($staff)->get('/laporan/export');
-        $response->assertOk();
-        $this->assertTrue(str_contains($response->headers->get('content-type'), 'spreadsheetml'));
+        // Staff is forbidden from exporting
+        $this->actingAs($staff)->get('/laporan/export')->assertForbidden();
+
+        // Staff cannot see export button on laporan view
+        $this->actingAs($staff)->get('/laporan')->assertOk()->assertDontSee('Ekspor ke Excel');
+
+        // Admin can export and sees export button
+        $responseAdmin = $this->actingAs($admin)->get('/laporan/export');
+        $responseAdmin->assertOk();
+        $this->assertTrue(str_contains($responseAdmin->headers->get('content-type'), 'spreadsheetml'));
+        $this->actingAs($admin)->get('/laporan')->assertOk()->assertSee('Ekspor ke Excel');
+
+        // SuperAdmin can export
+        $responseSuper = $this->actingAs($superadmin)->get('/laporan/export');
+        $responseSuper->assertOk();
+        $this->assertTrue(str_contains($responseSuper->headers->get('content-type'), 'spreadsheetml'));
     }
 
     public function test_operator_can_record_pemasukan_with_photo_file(): void

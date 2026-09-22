@@ -31,12 +31,12 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/monitoring/{tank}/record-bbm', [MonitoringController::class, 'recordBbm'])->name('monitoring.recordBbm');
     Route::get('/monitoring/{tank}/status', [MonitoringController::class, 'getStatus'])->name('monitoring.status');
 
-    // Report & Export Routes
+    // Report Routes (All authenticated users)
     Route::get('/laporan', [ReportController::class, 'index'])->name('laporan.index');
-    Route::get('/laporan/export', [ReportController::class, 'export'])->name('laporan.export');
 
-    // Chart & Analytics Routes (Admin & Superadmin)
+    // Export, Chart & Analytics Routes (Admin & Superadmin only)
     Route::middleware(['role:admin,superadmin'])->group(function (): void {
+        Route::get('/laporan/export', [ReportController::class, 'export'])->name('laporan.export');
         Route::get('/chart', [ChartController::class, 'index'])->name('chart.index');
     });
 
