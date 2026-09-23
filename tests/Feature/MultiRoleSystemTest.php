@@ -230,6 +230,11 @@ class MultiRoleSystemTest extends TestCase
         $tank = Tank::where('code', 'TNK-TEST')->first();
         $this->assertNotNull($tank);
         $this->assertGreaterThan(0, $tank->capacity_liters);
+
+        $telemetry = $tank->telemetries()->latest()->first();
+        $this->assertNotNull($telemetry);
+        $this->assertEquals(0.0, (float) $telemetry->volume_liters);
+        $this->assertEquals('empty', $telemetry->status);
     }
 
     public function test_superadmin_can_toggle_sidebar_menu_visibility(): void

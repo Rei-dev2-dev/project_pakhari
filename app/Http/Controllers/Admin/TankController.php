@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tank;
-use App\Models\TankTelemetry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -67,18 +66,16 @@ class TankController extends Controller
 
         $tank = Tank::create($validated);
 
-        // Seed initial telemetry for the new tank
-        $defaultVol = round($tank->capacity_liters * 0.35, 1);
-        $pct = 35.0;
-        $height = round(($defaultVol / $tank->capacity_liters) * $tank->height_cm, 1);
+        // Seed initial telemetry for the new tank (Default: Kosong 0.0 Liter)
         $tank->telemetries()->create([
-            'volume_liters' => $defaultVol,
-            'percentage' => $pct,
-            'height_cm' => $height,
-            'status' => TankTelemetry::determineStatus($defaultVol, $tank->capacity_liters),
+            'user_id' => auth()->id(),
+            'volume_liters' => 0.0,
+            'percentage' => 0.0,
+            'height_cm' => 0.0,
+            'status' => 'empty',
             'source' => 'system_init',
-            'device_id' => 'ESP32-'.$tank->code,
-            'notes' => 'Inisialisasi sistem '.$tank->name,
+            'device_id' => 'ADMIN-'.(auth()->user()?->username ?? 'System'),
+            'notes' => 'Inisialisasi tangki baru '.$tank->name.' (Kondisi Awal Kosong)',
         ]);
 
         return redirect()->route('admin.tanks.index')->with('success', "Tangki {$tank->name} berhasil ditambahkan.");

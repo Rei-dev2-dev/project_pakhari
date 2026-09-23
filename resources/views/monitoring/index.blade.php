@@ -66,7 +66,7 @@
                 $cap = (float) $tank->capacity_liters > 0 ? (float) $tank->capacity_liters : 100.0;
                 $pct = $latest ? (float) $latest->percentage : round(($vol / $cap) * 100, 1);
                 $h = $latest ? (float) $latest->height_cm : round(($vol / $cap) * (float) $tank->height_cm, 1);
-                $status = $latest ? $latest->status : 'normal';
+                $status = $latest ? $latest->status : ($vol <= 0 ? 'empty' : 'normal');
             @endphp
             <div class="bg-slate-900 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-200 flex flex-col justify-between group">
                 <div>
