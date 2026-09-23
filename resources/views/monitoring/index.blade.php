@@ -183,8 +183,8 @@
                     <span class="text-[11px] text-slate-500 font-mono">Update: {{ $latest ? $latest->created_at->diffForHumans() : '-' }}</span>
                     
                     <div class="flex items-center gap-2 flex-wrap">
-                        @if(auth()->user()->isOperator())
-                            <!-- Button 1: Input Pemasukan BBM (Khusus Operator) -->
+                        @if(auth()->user()->hasRole(['operator', 'superadmin']))
+                            <!-- Button 1: Input Pemasukan BBM (Operator & SuperAdmin) -->
                             <button type="button" onclick="openPemasukanModal({{ $tank->id }})" 
                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,7 +193,7 @@
                                 <span>Input Pemasukan BBM</span>
                             </button>
 
-                            <!-- Button 2: Input Posisi Tangki Pemakaian (Khusus Operator) -->
+                            <!-- Button 2: Input Posisi Tangki Pemakaian (Operator & SuperAdmin) -->
                             <button type="button" onclick="openPemakaianModal({{ $tank->id }})" 
                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -162,6 +162,41 @@ class MultiRoleSystemTest extends TestCase
         ]);
     }
 
+    public function test_superadmin_can_see_bbm_input_buttons_and_record_bbm(): void
+    {
+        $superadmin = User::where('username', 'Daniel')->first();
+        $staff = User::where('username', 'Renaldi')->first();
+        $tank = Tank::where('code', 'TNK-A')->first();
+
+        // SuperAdmin sees the input buttons on monitoring page
+        $response = $this->actingAs($superadmin)->get('/monitoring');
+        $response->assertOk();
+        $response->assertSee('onclick="openPemasukanModal(', false);
+        $response->assertSee('onclick="openPemakaianModal(', false);
+
+        // Staff does not see input buttons
+        $this->actingAs($staff)->get('/monitoring')
+            ->assertOk()
+            ->assertDontSee('onclick="openPemasukanModal(', false)
+            ->assertDontSee('onclick="openPemakaianModal(', false);
+
+        // SuperAdmin can record pemasukan
+        $responseBbm = $this->actingAs($superadmin)->post('/monitoring/'.$tank->id.'/record-bbm', [
+            'type' => 'pemasukan',
+            'height_cm' => 35.0,
+            'notes' => 'Input langsung oleh SuperAdmin',
+        ]);
+
+        $responseBbm->assertRedirect();
+        $this->assertDatabaseHas('tank_telemetries', [
+            'tank_id' => $tank->id,
+            'user_id' => $superadmin->id,
+            'source' => 'pemasukan_bbm',
+            'height_cm' => 35.0,
+            'volume_liters' => 50.0,
+        ]);
+    }
+
     public function test_cannot_record_height_exceeding_tank_max_height(): void
     {
         $operator = User::where('username', 'Operator')->first();
