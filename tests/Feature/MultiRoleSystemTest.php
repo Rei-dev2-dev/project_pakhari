@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\SidebarMenu;
 use App\Models\Tank;
 use App\Models\TankTelemetry;
 use App\Models\User;
@@ -270,22 +269,6 @@ class MultiRoleSystemTest extends TestCase
         $this->assertNotNull($telemetry);
         $this->assertEquals(0.0, (float) $telemetry->volume_liters);
         $this->assertEquals('empty', $telemetry->status);
-    }
-
-    public function test_superadmin_can_toggle_sidebar_menu_visibility(): void
-    {
-        $superadmin = User::where('username', 'Daniel')->first();
-        $menu = SidebarMenu::first();
-
-        $initialState = $menu->is_active;
-
-        $response = $this->actingAs($superadmin)->post('/superadmin/menus/'.$menu->id.'/toggle');
-        $response->assertRedirect();
-
-        $this->assertDatabaseHas('sidebar_menus', [
-            'id' => $menu->id,
-            'is_active' => ! $initialState,
-        ]);
     }
 
     public function test_superadmin_can_create_new_user_with_role(): void

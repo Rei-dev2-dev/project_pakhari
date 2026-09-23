@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\SidebarMenu;
 use App\Models\Tank;
 use App\Models\TankTelemetry;
 use App\Models\User;
@@ -99,64 +98,5 @@ class DatabaseSeeder extends Seeder
 
         // 3. Clean and Empty All Telemetries (Zero records for clean production launch)
         TankTelemetry::truncate();
-
-        // 4. Seed Default Sidebar Menus
-        $menus = [
-            [
-                'title' => 'Monitoring Tangki',
-                'url' => '/monitoring',
-                'icon' => 'cube',
-                'roles' => ['staff', 'operator', 'admin', 'superadmin'],
-                'is_active' => true,
-                'sort_order' => 1,
-            ],
-            [
-                'title' => 'Laporan & Ekspor',
-                'url' => '/laporan',
-                'icon' => 'document-report',
-                'roles' => ['staff', 'operator', 'admin', 'superadmin'],
-                'is_active' => true,
-                'sort_order' => 2,
-            ],
-            [
-                'title' => 'Master Tangki',
-                'url' => '/admin/tanks',
-                'icon' => 'database',
-                'roles' => ['admin', 'superadmin'],
-                'is_active' => true,
-                'sort_order' => 3,
-            ],
-            [
-                'title' => 'Grafik & Analisis',
-                'url' => '/chart',
-                'icon' => 'chart-bar',
-                'roles' => ['admin', 'superadmin'],
-                'is_active' => true,
-                'sort_order' => 4,
-            ],
-            [
-                'title' => 'Manajemen Pengguna',
-                'url' => '/superadmin/users',
-                'icon' => 'users',
-                'roles' => ['superadmin'],
-                'is_active' => true,
-                'sort_order' => 5,
-            ],
-            [
-                'title' => 'Kelola Menu Sidebar',
-                'url' => '/superadmin/menus',
-                'icon' => 'menu',
-                'roles' => ['superadmin'],
-                'is_active' => true,
-                'sort_order' => 6,
-            ],
-        ];
-
-        foreach ($menus as $menu) {
-            SidebarMenu::updateOrCreate(
-                ['url' => $menu['url']],
-                $menu
-            );
-        }
     }
 }

@@ -5,7 +5,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChartController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\SuperAdmin\SidebarMenuController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\TandonMonitoringController;
 use Illuminate\Support\Facades\Route;
@@ -48,8 +47,6 @@ Route::middleware(['auth'])->group(function (): void {
     // SuperAdmin Routes (Superadmin only)
     Route::middleware(['role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function (): void {
         Route::resource('users', UserController::class)->names('users');
-        Route::resource('menus', SidebarMenuController::class)->names('menus');
-        Route::post('/menus/{menu}/toggle', [SidebarMenuController::class, 'toggle'])->name('menus.toggle');
     });
 });
 

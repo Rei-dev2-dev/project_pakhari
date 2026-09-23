@@ -41,6 +41,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', 'unique:users,username'],
             'email' => ['nullable', 'email', 'max:100', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'password' => ['required', 'string', 'min:6'],
             'role' => ['required', Rule::in([User::ROLE_STAFF, User::ROLE_OPERATOR, User::ROLE_ADMIN, User::ROLE_SUPERADMIN])],
         ]);
@@ -49,6 +50,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'] ?? ($validated['username'].'@pelindo.co.id'),
+            'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'],
             'role' => $validated['role'],
         ]);
@@ -75,6 +77,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user->id)],
             'email' => ['nullable', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:20'],
             'password' => ['nullable', 'string', 'min:6'],
             'role' => ['required', Rule::in([User::ROLE_STAFF, User::ROLE_OPERATOR, User::ROLE_ADMIN, User::ROLE_SUPERADMIN])],
         ]);
@@ -83,6 +86,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'] ?? $user->email,
+            'phone' => $validated['phone'] ?? null,
             'role' => $validated['role'],
         ];
 

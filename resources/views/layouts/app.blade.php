@@ -38,10 +38,6 @@
 
     @php
         $currentRole = auth()->user()->role ?? 'staff';
-        $sidebarMenus = \App\Models\SidebarMenu::where('is_active', true)
-            ->whereJsonContains('roles', $currentRole)
-            ->orderBy('sort_order', 'asc')
-            ->get();
     @endphp
 
     <!-- MOBILE BACKDROP OVERLAY -->
@@ -83,44 +79,63 @@
         <div class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             <div class="px-3 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Menu Navigasi</div>
 
-            @foreach($sidebarMenus as $menu)
-                @php
-                    $isActive = request()->is(ltrim($menu->url, '/') . '*') || request()->fullUrl() == url($menu->url);
-                @endphp
-                <a href="{{ url($menu->url) }}" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ $isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent' }}">
-                    @if($menu->icon == 'cube')
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                    @elseif($menu->icon == 'document-report')
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    @elseif($menu->icon == 'database')
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-                        </svg>
-                    @elseif($menu->icon == 'users')
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                    @elseif($menu->icon == 'chart-bar' || $menu->icon == 'chart')
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    @elseif($menu->icon == 'menu')
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    @else
-                        <svg class="w-4 h-4 shrink-0 {{ $isActive ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                    @endif
-                    <span>{{ $menu->title }}</span>
+            <!-- 1. Monitoring Tangki (All roles) -->
+            @php $isMonitoring = request()->routeIs('monitoring.*'); @endphp
+            <a href="{{ route('monitoring.index') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ $isMonitoring ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent' }}">
+                <svg class="w-4 h-4 shrink-0 {{ $isMonitoring ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <span>Monitoring Tangki</span>
+            </a>
+
+            <!-- 2. Laporan & Ekspor (Admin & SuperAdmin only) -->
+            @if(in_array($currentRole, ['admin', 'superadmin']))
+                @php $isLaporan = request()->routeIs('laporan.*'); @endphp
+                <a href="{{ route('laporan.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ $isLaporan ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent' }}">
+                    <svg class="w-4 h-4 shrink-0 {{ $isLaporan ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Laporan & Ekspor</span>
                 </a>
-            @endforeach
+            @endif
+
+            <!-- 3. Master Tangki (Admin & SuperAdmin) -->
+            @if(in_array($currentRole, ['admin', 'superadmin']))
+                @php $isMasterTank = request()->routeIs('admin.tanks.*'); @endphp
+                <a href="{{ route('admin.tanks.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ $isMasterTank ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent' }}">
+                    <svg class="w-4 h-4 shrink-0 {{ $isMasterTank ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    <span>Master Tangki</span>
+                </a>
+            @endif
+
+            <!-- 4. Grafik & Analisis (Admin & SuperAdmin) -->
+            @if(in_array($currentRole, ['admin', 'superadmin']))
+                @php $isChart = request()->routeIs('chart.*'); @endphp
+                <a href="{{ route('chart.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ $isChart ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent' }}">
+                    <svg class="w-4 h-4 shrink-0 {{ $isChart ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>Grafik & Analisis</span>
+                </a>
+            @endif
+
+            <!-- 5. Manajemen Pengguna (SuperAdmin only) -->
+            @if($currentRole === 'superadmin')
+                @php $isUsers = request()->routeIs('superadmin.users.*'); @endphp
+                <a href="{{ route('superadmin.users.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ $isUsers ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent' }}">
+                    <svg class="w-4 h-4 shrink-0 {{ $isUsers ? 'text-cyan-400' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span>Manajemen Pengguna</span>
+                </a>
+            @endif
         </div>
 
         <!-- User Profile & Logout Bottom Card -->

@@ -58,6 +58,14 @@
                 </div>
             </div>
 
+            <!-- Phone -->
+            <div>
+                <label for="phone" class="block text-xs font-semibold text-slate-300 mb-1.5">No. Telepon (Opsional)</label>
+                <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
+                    placeholder="Contoh: 081234567890"
+                    class="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono">
+            </div>
+
             <!-- Password -->
             <div>
                 <label for="password" class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>

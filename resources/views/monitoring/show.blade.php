@@ -40,10 +40,7 @@
             <span>Kembali ke Semua Tangki</span>
         </a>
 
-        <div class="flex items-center space-x-2 text-xs text-slate-400 font-mono flex-wrap">
-            <span>Dimensi:</span>
-            <span class="text-slate-200">P: {{ number_format($tank->length_cm ?? 200, 0) }}cm &bull; L: {{ number_format($tank->width_cm, 0) }}cm &bull; T: {{ number_format($tank->height_cm, 0) }}cm &bull; D: {{ number_format($tank->diameter_cm, 0) }}cm</span>
-        </div>
+        
     </div>
 
     <!-- Main Grid: 3D Viewport (Left 7 Cols) + Control Panel (Right 5 Cols) -->
@@ -205,12 +202,14 @@
                         <h3 class="text-xs font-bold text-white uppercase tracking-wider">Riwayat Telemetri Tangki</h3>
                         <p class="text-[11px] text-slate-400">10 data log transaksi/sensor terakhir</p>
                     </div>
-                    <a href="{{ route('laporan.index', ['tank_id' => $tank->id]) }}" class="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
-                        <span>Lihat Semua</span>
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
+                    @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                        <a href="{{ route('laporan.index', ['tank_id' => $tank->id]) }}" class="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+                            <span>Lihat Semua</span>
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    @endif
                 </div>
 
                 <div class="overflow-x-auto">
