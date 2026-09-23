@@ -29,7 +29,7 @@ class ReportController extends Controller
     {
         $tanks = Tank::orderBy('sort_order', 'asc')->get();
 
-        $query = TankTelemetry::with('tank')->latest();
+        $query = TankTelemetry::with(['tank', 'user'])->latest();
 
         if ($request->filled('tank_id')) {
             $query->where('tank_id', $request->input('tank_id'));
@@ -65,7 +65,11 @@ class ReportController extends Controller
      */
     public function export(Request $request): Response
     {
-        $query = TankTelemetry::with('tank')->latest();
+        if (! auth()->user()->hasRole(['admin', 'superadmin'])) {
+            abort(403, 'Akses ekspor laporan hanya untuk Admin dan SuperAdmin.');
+        }
+
+        $query = TankTelemetry::with(['tank', 'user'])->latest();
 
         $tankName = 'Semua-Tangki';
         if ($request->filled('tank_id')) {
@@ -107,17 +111,18 @@ class ReportController extends Controller
             'G' => 'Ketinggian (cm)',
             'H' => 'Status',
             'I' => 'Jenis Transaksi',
-            'J' => 'Device ID',
-            'K' => 'Catatan',
-            'L' => 'Foto Bukti',
-            'M' => 'Waktu',
+            'J' => 'Petugas / User',
+            'K' => 'Device ID',
+            'L' => 'Catatan',
+            'M' => 'Foto Bukti',
+            'N' => 'Waktu',
         ];
 
         foreach ($columns as $col => $label) {
             $sheet->setCellValue($col.'1', $label);
         }
 
-        $sheet->getStyle('A1:M1')->applyFromArray([
+        $sheet->getStyle('A1:N1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -139,7 +144,7 @@ class ReportController extends Controller
         $sheet->getRowDimension(1)->setRowHeight(24);
 
         // Column widths
-        foreach (['A' => 5, 'B' => 22, 'C' => 12, 'D' => 14, 'E' => 12, 'F' => 14, 'G' => 14, 'H' => 14, 'I' => 18, 'J' => 24, 'K' => 32, 'L' => 20, 'M' => 20] as $col => $width) {
+        foreach (['A' => 5, 'B' => 22, 'C' => 12, 'D' => 14, 'E' => 12, 'F' => 14, 'G' => 14, 'H' => 14, 'I' => 18, 'J' => 20, 'K' => 24, 'L' => 32, 'M' => 20, 'N' => 20] as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }
 
@@ -163,6 +168,7 @@ class ReportController extends Controller
 
         foreach ($records as $log) {
             $tank = $log->tank;
+            $userName = $log->user ? $log->user->name : ($log->device_id ? str_replace(['OPERATOR-', 'MANUAL-'], '', $log->device_id) : 'Sistem');
 
             $sheet->setCellValue('A'.$rowIndex, $no++);
             $sheet->setCellValue('B'.$rowIndex, $tank ? $tank->name : 'Tangki Utama');
@@ -173,11 +179,12 @@ class ReportController extends Controller
             $sheet->setCellValue('G'.$rowIndex, number_format($log->height_cm, 2).' cm');
             $sheet->setCellValue('H'.$rowIndex, ucfirst(str_replace('_', ' ', $log->status)));
             $sheet->setCellValue('I'.$rowIndex, $log->source);
-            $sheet->setCellValue('J'.$rowIndex, $log->device_id ?? '-');
-            $sheet->setCellValue('K'.$rowIndex, $log->notes ?? '-');
-            $sheet->setCellValue('M'.$rowIndex, $log->created_at->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('J'.$rowIndex, $userName);
+            $sheet->setCellValue('K'.$rowIndex, $log->device_id ?? '-');
+            $sheet->setCellValue('L'.$rowIndex, $log->notes ?? '-');
+            $sheet->setCellValue('N'.$rowIndex, $log->created_at->format('Y-m-d H:i:s'));
 
-            $sheet->getStyle('A'.$rowIndex.':M'.$rowIndex)->applyFromArray($rowDataStyle);
+            $sheet->getStyle('A'.$rowIndex.':N'.$rowIndex)->applyFromArray($rowDataStyle);
             $sheet->getStyle('A'.$rowIndex)->getAlignment()->setHorizontal(
                 Alignment::HORIZONTAL_CENTER
             );
@@ -198,23 +205,23 @@ class ReportController extends Controller
                             $drawing->setName('Foto Bukti');
                             $drawing->setDescription('Foto Bukti');
                             $drawing->setPath($physicalPath);
-                            $drawing->setCoordinates('L'.$rowIndex);
+                            $drawing->setCoordinates('M'.$rowIndex);
                             $drawing->setOffsetX(4);
                             $drawing->setOffsetY(4);
                             $drawing->setHeight(52);
                             $drawing->setWorksheet($sheet);
                             $rowHeight = 60;
                         } else {
-                            $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
+                            $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
                         }
                     } catch (\Throwable) {
-                        $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
+                        $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
                     }
                 } else {
-                    $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
+                    $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
                 }
             } else {
-                $sheet->setCellValue('L'.$rowIndex, '-');
+                $sheet->setCellValue('M'.$rowIndex, '-');
             }
 
             $sheet->getRowDimension($rowIndex)->setRowHeight($rowHeight);
