@@ -114,13 +114,16 @@ class MultiRoleSystemTest extends TestCase
 
     public function test_operator_can_record_pemasukan_bbm_with_automatic_liter_calculation(): void
     {
+        Storage::fake('public');
         $operator = User::where('username', 'Operator')->first();
         $tank = Tank::where('code', 'TNK-A')->first(); // capacity=100L, height=70cm
+        $photo = UploadedFile::fake()->image('bukti_pemasukan.jpg', 640, 480);
 
         $response = $this->actingAs($operator)->post('/monitoring/'.$tank->id.'/record-bbm', [
             'type' => 'pemasukan',
             'height_cm' => 35.0, // 35 / 70 = 50% => 50 Liters
             'notes' => 'Penerimaan BBM Truk #01',
+            'photo' => $photo,
         ]);
 
         $response->assertRedirect();
@@ -135,14 +138,18 @@ class MultiRoleSystemTest extends TestCase
 
     public function test_operator_can_record_pemakaian_bbm_with_automatic_subtraction(): void
     {
+        Storage::fake('public');
         $operator = User::where('username', 'Operator')->first();
         $tank = Tank::where('code', 'TNK-A')->first(); // capacity=100L, height=70cm
+        $photo1 = UploadedFile::fake()->image('isi_penuh.jpg', 640, 480);
+        $photo2 = UploadedFile::fake()->image('pemakaian.jpg', 640, 480);
 
         // Set initial fill first to 70cm (100L)
         $this->actingAs($operator)->post('/monitoring/'.$tank->id.'/record-bbm', [
             'type' => 'pemasukan',
             'height_cm' => 70.0,
             'notes' => 'Isi Penuh',
+            'photo' => $photo1,
         ]);
 
         // Record pemakaian, remaining height 42cm (60L => used 40L)
@@ -150,6 +157,7 @@ class MultiRoleSystemTest extends TestCase
             'type' => 'pemakaian',
             'height_cm' => 42.0,
             'notes' => 'Pemakaian Genset Dermaga',
+            'photo' => $photo2,
         ]);
 
         $response->assertRedirect();
@@ -163,9 +171,11 @@ class MultiRoleSystemTest extends TestCase
 
     public function test_superadmin_can_see_bbm_input_buttons_and_record_bbm(): void
     {
+        Storage::fake('public');
         $superadmin = User::where('username', 'Daniel')->first();
         $staff = User::where('username', 'Renaldi')->first();
         $tank = Tank::where('code', 'TNK-A')->first();
+        $photo = UploadedFile::fake()->image('bukti_superadmin.jpg', 640, 480);
 
         // SuperAdmin sees the input buttons on monitoring page
         $response = $this->actingAs($superadmin)->get('/monitoring');
@@ -184,6 +194,7 @@ class MultiRoleSystemTest extends TestCase
             'type' => 'pemasukan',
             'height_cm' => 35.0,
             'notes' => 'Input langsung oleh SuperAdmin',
+            'photo' => $photo,
         ]);
 
         $responseBbm->assertRedirect();
@@ -196,14 +207,31 @@ class MultiRoleSystemTest extends TestCase
         ]);
     }
 
-    public function test_cannot_record_height_exceeding_tank_max_height(): void
+    public function test_operator_cannot_record_bbm_without_photo_proof(): void
     {
         $operator = User::where('username', 'Operator')->first();
+        $tank = Tank::where('code', 'TNK-A')->first();
+
+        $response = $this->actingAs($operator)->post('/monitoring/'.$tank->id.'/record-bbm', [
+            'type' => 'pemasukan',
+            'height_cm' => 35.0,
+            'notes' => 'Tanpa foto',
+        ]);
+
+        $response->assertSessionHasErrors('photo');
+    }
+
+    public function test_cannot_record_height_exceeding_tank_max_height(): void
+    {
+        Storage::fake('public');
+        $operator = User::where('username', 'Operator')->first();
         $tank = Tank::where('code', 'TNK-A')->first(); // max height = 70cm
+        $photo = UploadedFile::fake()->image('bukti.jpg', 640, 480);
 
         $response = $this->actingAs($operator)->post('/monitoring/'.$tank->id.'/record-bbm', [
             'type' => 'pemasukan',
             'height_cm' => 150.0, // Exceeds 70cm
+            'photo' => $photo,
         ]);
 
         $response->assertSessionHasErrors('height_cm');

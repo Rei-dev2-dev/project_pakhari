@@ -201,6 +201,27 @@ class ReportController extends Controller
                         $supported = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP];
 
                         if ($imgType && in_array($imgType, $supported)) {
+                            [$imgW, $imgH] = @getimagesize($physicalPath) ?: [1, 1];
+                            $isPortrait = $imgH >= $imgW;
+
+                            // Column M width in Excel units (~7.5px per unit)
+                            // Portrait: fill column height at 9:16 → col width stays 20 units ≈ 150px
+                            // Landscape: fill column width at 16:9 → col width stays 20 units ≈ 150px
+                            $colWidthPx = 150; // approx pixels for 20 Excel column-width units
+
+                            if ($isPortrait) {
+                                // 9:16 → height = colWidth * 16/9
+                                $imgDisplayH = (int) round($colWidthPx * 16 / 9);
+                                $imgDisplayW = $colWidthPx;
+                            } else {
+                                // 16:9 → height = colWidth * 9/16
+                                $imgDisplayH = (int) round($colWidthPx * 9 / 16);
+                                $imgDisplayW = $colWidthPx;
+                            }
+
+                            // Excel row height is in points (≈ 0.75px); add 8px padding
+                            $rowHeightPt = ($imgDisplayH + 8) * 0.75;
+
                             $drawing = new Drawing;
                             $drawing->setName('Foto Bukti');
                             $drawing->setDescription('Foto Bukti');
@@ -208,9 +229,12 @@ class ReportController extends Controller
                             $drawing->setCoordinates('M'.$rowIndex);
                             $drawing->setOffsetX(4);
                             $drawing->setOffsetY(4);
-                            $drawing->setHeight(52);
+                            $drawing->setWidth($imgDisplayW);
+                            $drawing->setHeight($imgDisplayH);
+                            $drawing->setResizeProportional(false);
                             $drawing->setWorksheet($sheet);
-                            $rowHeight = 60;
+
+                            $rowHeight = $rowHeightPt;
                         } else {
                             $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
                         }

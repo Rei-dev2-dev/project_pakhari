@@ -266,7 +266,7 @@
                         </div>
                     </div>
 
-                    <form action="{{ route('monitoring.recordBbm', $tank->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <form action="{{ route('monitoring.recordBbm', $tank->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4" onsubmit="return validateBbmPhotoSubmission(event, 'pemasukan_photo_{{ $tank->id }}', 'pemasukan_camera_{{ $tank->id }}', 'pemasukan_base64_{{ $tank->id }}')">
                         @csrf
                         <input type="hidden" name="type" value="pemasukan">
 
@@ -314,6 +314,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                     <span>Foto Bukti Pemasukan</span>
+                                    <span class="text-rose-400 font-semibold">* (Wajib)</span>
                                 </span>
                                 <span class="text-[10px] text-slate-500 font-mono">JPG/PNG maks 10MB</span>
                             </label>
@@ -455,7 +456,7 @@
                         </div>
                     </div>
 
-                    <form action="{{ route('monitoring.recordBbm', $tank->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <form action="{{ route('monitoring.recordBbm', $tank->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4" onsubmit="return validateBbmPhotoSubmission(event, 'pemakaian_photo_{{ $tank->id }}', 'pemakaian_camera_{{ $tank->id }}', 'pemakaian_base64_{{ $tank->id }}')">
                         @csrf
                         <input type="hidden" name="type" value="pemakaian">
 
@@ -503,6 +504,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                     <span>Foto Bukti Pemakaian</span>
+                                    <span class="text-rose-400 font-semibold">* (Wajib)</span>
                                 </span>
                                 <span class="text-[10px] text-slate-500 font-mono">JPG/PNG maks 10MB</span>
                             </label>
@@ -1037,6 +1039,23 @@
         if (base64Input) { base64Input.value = ''; }
         if (preview) { preview.classList.add('hidden'); }
         if (label) { label.textContent = 'Klik tanda plus (+) untuk unggah bukti...'; }
+    };
+
+    window.validateBbmPhotoSubmission = function(event, photoId, camId, base64Id) {
+        const photoEl = document.getElementById(photoId);
+        const camEl = document.getElementById(camId);
+        const base64El = document.getElementById(base64Id);
+
+        const hasPhoto = (photoEl && photoEl.files && photoEl.files.length > 0) ||
+                         (camEl && camEl.files && camEl.files.length > 0) ||
+                         (base64El && base64El.value && base64El.value.trim() !== '');
+
+        if (!hasPhoto) {
+            alert('Foto bukti wajib dilampirkan sebelum menyimpan data!');
+            if (event) { event.preventDefault(); }
+            return false;
+        }
+        return true;
     };
 
     // --- CAMERA CAPTURE LOGIC (SUPPORTS BOTH HTTP INTERNAL & HTTPS) ---

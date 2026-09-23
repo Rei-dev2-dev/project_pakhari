@@ -154,6 +154,20 @@ class MonitoringController extends Controller
             $photoPath = $request->file('photo_cam')->store('telemetry_proofs', 'public');
         }
 
+        if (! $photoPath) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Foto bukti wajib dilampirkan.',
+                    'errors' => ['photo' => ['Foto bukti wajib dilampirkan saat melakukan input BBM.']],
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['photo' => 'Foto bukti wajib dilampirkan saat melakukan input BBM.']);
+        }
+
         // Get latest telemetry to know initial state
         $latest = $tank->telemetries()->latest()->first();
         $initialVol = $latest ? (float) $latest->volume_liters : 0.0;
