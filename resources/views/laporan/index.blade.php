@@ -296,48 +296,36 @@
             <table class="w-full text-left text-xs">
                 <thead>
                     <tr class="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                        <th class="py-3 px-4">No</th>
-                        <th class="py-3 px-4">Tangki</th>
-                        <th class="py-3 px-4">Volume</th>
-                        <th class="py-3 px-4">Persentase</th>
-                        <th class="py-3 px-4">Ketinggian</th>
-                        <th class="py-3 px-4">Status</th>
-                        <th class="py-3 px-4">Jenis</th>
-                        <th class="py-3 px-4">Petugas</th>
-                        <th class="py-3 px-4">Catatan</th>
-                        <th class="py-3 px-4">Foto Bukti</th>
-                        <th class="py-3 px-4">Waktu</th>
+                        <th class="py-3.5 px-3 text-center">No</th>
+                        <th class="py-3.5 px-3">Nama Tangki</th>
+                        <th class="py-3.5 px-3">Petugas</th>
+                        <th class="py-3.5 px-3 text-center">Jenis Transaksi</th>
+                        <th class="py-3.5 px-3 text-right">Ketinggian (cm)</th>
+                        <th class="py-3.5 px-3 text-right">Kapasitas Tangki</th>
+                        <th class="py-3.5 px-3 text-right">Volume Awal</th>
+                        <th class="py-3.5 px-3 text-right">Volume Perubahan</th>
+                        <th class="py-3.5 px-3 text-right">Volume Akhir</th>
+                        <th class="py-3.5 px-3 text-right">Persentase (%)</th>
+                        <th class="py-3.5 px-3">Catatan</th>
+                        <th class="py-3.5 px-3 text-center">Foto Bukti</th>
+                        <th class="py-3.5 px-3 text-center">Waktu</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-mono text-[11px]">
                     @forelse($logs as $index => $log)
+                        @php
+                            $volAwal = $log->volume_awal ?? ($log->volume_liters - ($log->volume_perubahan ?? 0));
+                            $volPerubahan = $log->volume_perubahan ?? 0;
+                            $cleanNotes = $log->notes ? preg_replace('/\s*&mdash;\s*(.*?)$/', ' ($1)', $log->notes) : '-';
+                            $cleanNotes = str_replace('&mdash;', '-', $cleanNotes);
+                        @endphp
                         <tr class="hover:bg-slate-800/30 transition">
-                            <td class="py-3 px-4 text-slate-500">{{ $logs->firstItem() + $index }}</td>
-                            <td class="py-3 px-4 font-sans font-bold text-slate-200">
+                            <td class="py-3 px-3 text-center text-slate-500">{{ $logs->firstItem() + $index }}</td>
+                            <td class="py-3 px-3 font-sans font-bold text-slate-200">
                                 {{ $log->tank ? $log->tank->name : 'Tangki Utama' }}
                                 <span class="block text-[10px] text-slate-400 font-mono font-normal">{{ $log->tank ? $log->tank->code : 'TNK-01' }}</span>
                             </td>
-                            <td class="py-3 px-4 font-bold text-white">{{ number_format($log->volume_liters, 2) }} L</td>
-                            <td class="py-3 px-4 text-cyan-400 font-bold">{{ number_format($log->percentage, 2) }}%</td>
-                            <td class="py-3 px-4 text-slate-300">{{ number_format($log->height_cm, 2) }} cm</td>
-                            <td class="py-3 px-4">
-                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono
-                                    @if($log->status === 'warning_full') bg-rose-500/10 text-rose-400 border border-rose-500/30
-                                    @elseif($log->status === 'low') bg-amber-500/10 text-amber-400 border border-amber-500/30
-                                    @else bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 @endif">
-                                    {{ strtoupper(str_replace('_', ' ', $log->status)) }}
-                                </span>
-                            </td>
-                            <td class="py-3 px-4">
-                                @if($log->source === 'pemasukan_bbm')
-                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">PEMASUKAN</span>
-                                @elseif($log->source === 'pemakaian_bbm')
-                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30">PEMAKAIAN</span>
-                                @else
-                                    <span class="text-slate-500">{{ $log->source }}</span>
-                                @endif
-                            </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-3">
                                 @if($log->user)
                                     <span class="font-sans font-semibold text-slate-200 block">{{ $log->user->name }}</span>
                                     <span class="text-[10px] text-slate-400 font-mono font-normal uppercase">{{ $log->user->role }}</span>
@@ -348,19 +336,36 @@
                                     <span class="text-slate-500 font-sans">Sistem</span>
                                 @endif
                             </td>
-                            <td class="py-3 px-4 text-slate-400 font-sans max-w-[120px] truncate" title="{{ $log->notes ?? '-' }}">
-                                {{ $log->notes ? Str::limit($log->notes, 30) : '-' }}
+                            <td class="py-3 px-3 text-center">
+                                @if($log->source === 'pemasukan_bbm')
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">PEMASUKAN</span>
+                                @elseif($log->source === 'pemakaian_bbm')
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30">PEMAKAIAN</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 uppercase">{{ $log->source }}</span>
+                                @endif
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-3 text-right text-slate-300">{{ number_format($log->height_cm, 1) }} cm</td>
+                            <td class="py-3 px-3 text-right text-slate-300">{{ number_format($log->tank ? $log->tank->capacity_liters : 100, 1) }} L</td>
+                            <td class="py-3 px-3 text-right text-slate-400">{{ number_format($volAwal, 1) }} L</td>
+                            <td class="py-3 px-3 text-right font-bold {{ $volPerubahan > 0 ? 'text-emerald-400' : ($volPerubahan < 0 ? 'text-amber-400' : 'text-slate-400') }}">
+                                {{ ($volPerubahan > 0 ? '+' : '') . number_format($volPerubahan, 1) }} L
+                            </td>
+                            <td class="py-3 px-3 text-right font-bold text-white">{{ number_format($log->volume_liters, 1) }} L</td>
+                            <td class="py-3 px-3 text-right text-cyan-400 font-bold">{{ number_format($log->percentage, 1) }}%</td>
+                            <td class="py-3 px-3 text-slate-400 font-sans max-w-[140px] truncate" title="{{ $cleanNotes }}">
+                                {{ $cleanNotes !== '-' ? Str::limit($cleanNotes, 35) : '-' }}
+                            </td>
+                            <td class="py-3 px-3 text-center">
                             @if($log->photo_path)
                                 <button type="button"
                                     onclick="openLightbox('{{ asset('storage/' . $log->photo_path) }}')"
-                                    class="group relative block">
+                                    class="group relative inline-block">
                                     <img src="{{ asset('storage/' . $log->photo_path) }}"
                                         alt="Foto Bukti"
-                                        class="w-10 h-10 rounded-lg object-cover border border-slate-700 group-hover:border-cyan-500 transition cursor-pointer">
+                                        class="w-9 h-9 rounded-lg object-cover border border-slate-700 group-hover:border-cyan-500 transition cursor-pointer">
                                     <span class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-lg transition">
-                                        <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                         </svg>
                                     </span>
@@ -369,11 +374,11 @@
                                 <span class="text-slate-600">—</span>
                             @endif
                             </td>
-                            <td class="py-3 px-4 text-slate-400">{{ $log->created_at->format('Y-m-d H:i:s') }}</td>
+                            <td class="py-3 px-3 text-center text-slate-400">{{ $log->created_at->format('Y-m-d H:i:s') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="py-8 text-center text-slate-500 font-sans">
+                            <td colspan="13" class="py-8 text-center text-slate-500 font-sans">
                                 Tidak ada data telemetri yang sesuai dengan filter pencarian.
                             </td>
                         </tr>

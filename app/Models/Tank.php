@@ -71,6 +71,14 @@ class Tank extends Model
         return $this->hasMany(TankTelemetry::class, 'tank_id');
     }
 
+    /**
+     * @return HasMany<RiwayatTransaksiBbm, $this>
+     */
+    public function riwayatTransaksi(): HasMany
+    {
+        return $this->hasMany(RiwayatTransaksiBbm::class, 'tank_id');
+    }
+
     public function latestTelemetry(): ?TankTelemetry
     {
         return $this->telemetries()->latest()->first();

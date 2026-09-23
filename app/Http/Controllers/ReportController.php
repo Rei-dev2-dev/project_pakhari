@@ -100,29 +100,28 @@ class ReportController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Laporan BBM');
 
-        // ── Header row ─────────────────────────────────────────────────────────
+        // ── Main Header row (13 Kolom) ──────────────────────────────────────────
         $columns = [
             'A' => 'No',
             'B' => 'Nama Tangki',
-            'C' => 'Kode Tangki',
-            'D' => 'Kapasitas (L)',
-            'E' => 'Volume (L)',
-            'F' => 'Persentase (%)',
-            'G' => 'Ketinggian (cm)',
-            'H' => 'Status',
-            'I' => 'Jenis Transaksi',
-            'J' => 'Petugas / User',
-            'K' => 'Device ID',
-            'L' => 'Catatan',
-            'M' => 'Foto Bukti',
-            'N' => 'Waktu',
+            'C' => 'Petugas',
+            'D' => 'Jenis Transaksi',
+            'E' => 'Ketinggian (cm)',
+            'F' => 'Kapasitas Tangki',
+            'G' => 'Volume Awal',
+            'H' => 'Volume Perubahan',
+            'I' => 'Volume Akhir',
+            'J' => 'Persentase (%)',
+            'K' => 'Catatan',
+            'L' => 'Foto Bukti',
+            'M' => 'Waktu',
         ];
 
         foreach ($columns as $col => $label) {
             $sheet->setCellValue($col.'1', $label);
         }
 
-        $sheet->getStyle('A1:N1')->applyFromArray([
+        $sheet->getStyle('A1:M1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
@@ -141,14 +140,34 @@ class ReportController extends Controller
             ],
         ]);
 
-        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getRowDimension(1)->setRowHeight(26);
 
         // Column widths
-        foreach (['A' => 5, 'B' => 22, 'C' => 12, 'D' => 14, 'E' => 12, 'F' => 14, 'G' => 14, 'H' => 14, 'I' => 18, 'J' => 20, 'K' => 24, 'L' => 32, 'M' => 20, 'N' => 20] as $col => $width) {
+        $colWidths = [
+            'A' => 6,
+            'B' => 20,
+            'C' => 18,
+            'D' => 18,
+            'E' => 16,
+            'F' => 16,
+            'G' => 15,
+            'H' => 18,
+            'I' => 15,
+            'J' => 15,
+            'K' => 28,
+            'L' => 22,
+            'M' => 20,
+            'N' => 4, // Spacer
+            'O' => 18, // Side Summary Table
+            'P' => 16,
+            'Q' => 18,
+        ];
+
+        foreach ($colWidths as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }
 
-        // ── Data rows ──────────────────────────────────────────────────────────
+        // ── Main Data rows ─────────────────────────────────────────────────────
         $records = $query->get();
         $rowDataStyle = [
             'alignment' => [
@@ -170,27 +189,39 @@ class ReportController extends Controller
             $tank = $log->tank;
             $userName = $log->user ? $log->user->name : ($log->device_id ? str_replace(['OPERATOR-', 'MANUAL-'], '', $log->device_id) : 'Sistem');
 
+            $jenisFormatted = match ($log->source) {
+                'pemasukan_bbm' => 'Pemasukan BBM',
+                'pemakaian_bbm' => 'Pemakaian BBM',
+                'manual_update' => 'Manual Update',
+                default => ucwords(str_replace('_', ' ', $log->source)),
+            };
+
+            $volAwal = $log->volume_awal ?? ($log->volume_liters - ($log->volume_perubahan ?? 0));
+            $volPerubahan = $log->volume_perubahan ?? 0;
+            $volPerubahanStr = ($volPerubahan > 0 ? '+' : '').number_format($volPerubahan, 1).' L';
+
             $sheet->setCellValue('A'.$rowIndex, $no++);
             $sheet->setCellValue('B'.$rowIndex, $tank ? $tank->name : 'Tangki Utama');
-            $sheet->setCellValue('C'.$rowIndex, $tank ? $tank->code : 'TNK-01');
-            $sheet->setCellValue('D'.$rowIndex, $tank ? number_format($tank->capacity_liters, 1) : '100.0');
-            $sheet->setCellValue('E'.$rowIndex, number_format($log->volume_liters, 2));
-            $sheet->setCellValue('F'.$rowIndex, number_format($log->percentage, 2).'%');
-            $sheet->setCellValue('G'.$rowIndex, number_format($log->height_cm, 2).' cm');
-            $sheet->setCellValue('H'.$rowIndex, ucfirst(str_replace('_', ' ', $log->status)));
-            $sheet->setCellValue('I'.$rowIndex, $log->source);
-            $sheet->setCellValue('J'.$rowIndex, $userName);
-            $sheet->setCellValue('K'.$rowIndex, $log->device_id ?? '-');
-            $sheet->setCellValue('L'.$rowIndex, $log->notes ?? '-');
-            $sheet->setCellValue('N'.$rowIndex, $log->created_at->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('C'.$rowIndex, $userName);
+            $sheet->setCellValue('D'.$rowIndex, $jenisFormatted);
+            $sheet->setCellValue('E'.$rowIndex, number_format($log->height_cm, 1).' cm');
+            $sheet->setCellValue('F'.$rowIndex, number_format($tank ? $tank->capacity_liters : 100, 1).' L');
+            $sheet->setCellValue('G'.$rowIndex, number_format($volAwal, 1).' L');
+            $sheet->setCellValue('H'.$rowIndex, $volPerubahanStr);
+            $sheet->setCellValue('I'.$rowIndex, number_format($log->volume_liters, 1).' L');
+            $cleanNotes = $log->notes ? preg_replace('/\s*&mdash;\s*(.*?)$/', ' ($1)', $log->notes) : '-';
+            $cleanNotes = str_replace('&mdash;', '-', $cleanNotes);
 
-            $sheet->getStyle('A'.$rowIndex.':N'.$rowIndex)->applyFromArray($rowDataStyle);
-            $sheet->getStyle('A'.$rowIndex)->getAlignment()->setHorizontal(
-                Alignment::HORIZONTAL_CENTER
-            );
+            $sheet->setCellValue('K'.$rowIndex, $cleanNotes);
+            $sheet->setCellValue('M'.$rowIndex, $log->created_at->format('Y-m-d H:i:s'));
 
-            // ── Embed photo thumbnail ──────────────────────────────────────────
-            $rowHeight = 20;
+            $sheet->getStyle('A'.$rowIndex.':M'.$rowIndex)->applyFromArray($rowDataStyle);
+            $sheet->getStyle('A'.$rowIndex)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('E'.$rowIndex.':J'.$rowIndex)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle('M'.$rowIndex)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // ── Embed photo thumbnail on column L ──────────────────────────────
+            $rowHeight = 22;
 
             if ($log->photo_path) {
                 $physicalPath = storage_path('app/public/'.$log->photo_path);
@@ -203,30 +234,23 @@ class ReportController extends Controller
                         if ($imgType && in_array($imgType, $supported)) {
                             [$imgW, $imgH] = @getimagesize($physicalPath) ?: [1, 1];
                             $isPortrait = $imgH >= $imgW;
-
-                            // Column M width in Excel units (~7.5px per unit)
-                            // Portrait: fill column height at 9:16 → col width stays 20 units ≈ 150px
-                            // Landscape: fill column width at 16:9 → col width stays 20 units ≈ 150px
-                            $colWidthPx = 150; // approx pixels for 20 Excel column-width units
+                            $colWidthPx = 150;
 
                             if ($isPortrait) {
-                                // 9:16 → height = colWidth * 16/9
                                 $imgDisplayH = (int) round($colWidthPx * 16 / 9);
                                 $imgDisplayW = $colWidthPx;
                             } else {
-                                // 16:9 → height = colWidth * 9/16
                                 $imgDisplayH = (int) round($colWidthPx * 9 / 16);
                                 $imgDisplayW = $colWidthPx;
                             }
 
-                            // Excel row height is in points (≈ 0.75px); add 8px padding
                             $rowHeightPt = ($imgDisplayH + 8) * 0.75;
 
                             $drawing = new Drawing;
                             $drawing->setName('Foto Bukti');
                             $drawing->setDescription('Foto Bukti');
                             $drawing->setPath($physicalPath);
-                            $drawing->setCoordinates('M'.$rowIndex);
+                            $drawing->setCoordinates('L'.$rowIndex);
                             $drawing->setOffsetX(4);
                             $drawing->setOffsetY(4);
                             $drawing->setWidth($imgDisplayW);
@@ -236,21 +260,104 @@ class ReportController extends Controller
 
                             $rowHeight = $rowHeightPt;
                         } else {
-                            $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
+                            $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
                         }
                     } catch (\Throwable) {
-                        $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
+                        $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
                     }
                 } else {
-                    $sheet->setCellValue('M'.$rowIndex, asset('storage/'.$log->photo_path));
+                    $sheet->setCellValue('L'.$rowIndex, asset('storage/'.$log->photo_path));
                 }
             } else {
-                $sheet->setCellValue('M'.$rowIndex, '-');
+                $sheet->setCellValue('L'.$rowIndex, '-');
             }
 
             $sheet->getRowDimension($rowIndex)->setRowHeight($rowHeight);
             $rowIndex++;
         }
+
+        // ── Side Summary Table (Ringkasan Kapasitas & Volume Akhir Per Tangki) ──
+        $allTanks = Tank::where('is_active', true)->orderBy('sort_order', 'asc')->orderBy('id', 'asc')->get();
+        if ($allTanks->isEmpty()) {
+            $allTanks = Tank::orderBy('id', 'asc')->get();
+        }
+
+        // Header for Side Table
+        $sheet->setCellValue('O1', '');
+        $sheet->setCellValue('P1', 'Kapasitas');
+        $sheet->setCellValue('Q1', 'Volume AKHIR');
+
+        $sideHeaderStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '000000'], 'size' => 10],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('O1:Q1')->applyFromArray($sideHeaderStyle);
+
+        $sideRow = 2;
+        $totalCap = 0.0;
+        $totalAkhir = 0.0;
+
+        foreach ($allTanks as $t) {
+            $latestTel = $t->latestTelemetry();
+            $capVal = (float) $t->capacity_liters;
+            $akhirVal = $latestTel ? (float) $latestTel->volume_liters : 0.0;
+
+            $totalCap += $capVal;
+            $totalAkhir += $akhirVal;
+
+            $sheet->setCellValue('O'.$sideRow, $t->name);
+            $sheet->setCellValue('P'.$sideRow, number_format($capVal, 1).' L');
+            $sheet->setCellValue('Q'.$sideRow, number_format($akhirVal, 1).' L');
+
+            $sheet->getStyle('O'.$sideRow.':Q'.$sideRow)->applyFromArray([
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+            $sheet->getStyle('O'.$sideRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle('P'.$sideRow.':Q'.$sideRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            $sideRow++;
+        }
+
+        // Total Row for Side Table
+        $sheet->setCellValue('O'.$sideRow, 'TOTAL');
+        $sheet->setCellValue('P'.$sideRow, number_format($totalCap, 1).' L');
+        $sheet->setCellValue('Q'.$sideRow, number_format($totalAkhir, 1).' L');
+
+        $sheet->getStyle('O'.$sideRow.':Q'.$sideRow)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => '000000'], 'size' => 10],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'FFE599'], // Light yellow/orange highlight matching screenshot
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ]);
+        $sheet->getStyle('O'.$sideRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('P'.$sideRow.':Q'.$sideRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         // Freeze top header row while scrolling
         $sheet->freezePane('A2');

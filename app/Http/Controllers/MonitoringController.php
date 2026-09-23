@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RiwayatTransaksiBbm;
 use App\Models\Tank;
 use App\Models\TankTelemetry;
 use Illuminate\Http\JsonResponse;
@@ -182,13 +183,13 @@ class MonitoringController extends Controller
 
         if ($type === 'pemasukan') {
             $delta = round($volumeLiters - $initialVol, 1);
-            $userNote = $validated['notes'] ? ' &mdash; '.$validated['notes'] : '';
+            $userNote = ! empty($validated['notes']) ? ' ('.$validated['notes'].')' : '';
             $notes = 'Pemasukan BBM (+'.max(0, $delta)." L, Ketinggian: {$inputHeight} cm){$userNote}";
             $source = 'pemasukan_bbm';
             $successMessage = "Pemasukan BBM {$tank->name} berhasil dicatat: Tinggi {$inputHeight} cm (".number_format($volumeLiters, 1).' L).';
         } else {
             $usedVol = round($initialVol - $volumeLiters, 1);
-            $userNote = $validated['notes'] ? ' &mdash; '.$validated['notes'] : '';
+            $userNote = ! empty($validated['notes']) ? ' ('.$validated['notes'].')' : '';
             $notes = 'Pemakaian BBM (-'.max(0, $usedVol).' L dari awal '.number_format($initialVol, 1)." L, Sisa: {$volumeLiters} L){$userNote}";
             $source = 'pemakaian_bbm';
             $successMessage = "Pemakaian BBM {$tank->name} berhasil dicatat: Terpakai ".max(0, $usedVol)." L (Sisa {$inputHeight} cm / ".number_format($volumeLiters, 1).' L).';
@@ -196,6 +197,8 @@ class MonitoringController extends Controller
 
         $telemetry = $tank->telemetries()->create([
             'user_id' => auth()->id(),
+            'volume_awal' => $initialVol,
+            'volume_perubahan' => $type === 'pemasukan' ? $delta : -abs($usedVol),
             'volume_liters' => $volumeLiters,
             'percentage' => $percentage,
             'height_cm' => $inputHeight,
@@ -204,6 +207,21 @@ class MonitoringController extends Controller
             'device_id' => 'OPERATOR-'.$operatorName,
             'notes' => $notes,
             'photo_path' => $photoPath,
+        ]);
+
+        RiwayatTransaksiBbm::create([
+            'tank_id' => $tank->id,
+            'user_id' => auth()->id(),
+            'jenis_transaksi' => $type,
+            'volume_awal' => $initialVol,
+            'volume_perubahan' => $type === 'pemasukan' ? $delta : -abs($usedVol),
+            'volume_akhir' => $volumeLiters,
+            'ketinggian_awal_cm' => $initialHeight,
+            'ketinggian_akhir_cm' => $inputHeight,
+            'nomor_do' => $type === 'pemasukan' ? ($validated['notes'] ?? null) : null,
+            'unit_tujuan' => $type === 'pemakaian' ? ($validated['notes'] ?? null) : null,
+            'foto_bukti' => $photoPath,
+            'catatan' => $validated['notes'] ?? null,
         ]);
 
         if ($request->wantsJson() || $request->ajax()) {

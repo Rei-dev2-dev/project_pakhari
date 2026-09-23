@@ -18,6 +18,8 @@ class TankTelemetry extends Model
     protected $fillable = [
         'tank_id',
         'user_id',
+        'volume_awal',
+        'volume_perubahan',
         'volume_liters',
         'percentage',
         'height_cm',
@@ -36,6 +38,8 @@ class TankTelemetry extends Model
         return [
             'tank_id' => 'integer',
             'user_id' => 'integer',
+            'volume_awal' => 'float',
+            'volume_perubahan' => 'float',
             'volume_liters' => 'float',
             'percentage' => 'float',
             'height_cm' => 'float',
