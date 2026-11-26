@@ -753,6 +753,38 @@
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
     });
+
+    // --- LIVE IOT TELEMETRY POLLING (WT32-ETH01 / ESP32 + JSN-SR04T) ---
+    const STATUS_URL = "{{ route('monitoring.status', $tank->id) }}";
+    async function pollLiveTelemetry() {
+        try {
+            const res = await fetch(STATUS_URL, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success || !data.telemetry) return;
+
+            const tel = data.telemetry;
+            const newVol = parseFloat(tel.volume_liters) || 0;
+            const newPct = parseFloat(tel.percentage) || 0;
+            const newHeight = parseFloat(tel.height_cm) || 0;
+            const newStatus = String(tel.status || 'empty');
+
+            targetLiters = newVol;
+
+            const cardVolEl = document.getElementById('cardVolume');
+            const cardPctEl = document.getElementById('cardPercentage');
+            const cardHeightEl = document.getElementById('cardHeight');
+            const cardStatusEl = document.getElementById('cardStatus');
+
+            if (cardVolEl) cardVolEl.textContent = newVol.toFixed(1);
+            if (cardPctEl) cardPctEl.textContent = newPct.toFixed(1);
+            if (cardHeightEl) cardHeightEl.textContent = newHeight.toFixed(1);
+            if (cardStatusEl) cardStatusEl.textContent = newStatus.replace('_', ' ').toUpperCase();
+        } catch (err) {
+            // Ignore transient polling errors
+        }
+    }
+    setInterval(pollLiveTelemetry, 3000);
 </script>
 @endpush
 

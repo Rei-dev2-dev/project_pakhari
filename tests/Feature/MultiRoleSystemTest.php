@@ -451,4 +451,20 @@ class MultiRoleSystemTest extends TestCase
         $this->assertNotNull($telemetry->photo_path);
         Storage::disk('public')->assertExists($telemetry->photo_path);
     }
+
+    public function test_staff_cannot_mutate_bbm_records_directly(): void
+    {
+        Storage::fake('public');
+        $staff = User::where('username', 'Renaldi')->first();
+        $tank = Tank::where('code', 'TNK-A')->first();
+        $photo = UploadedFile::fake()->image('bukti.jpg', 640, 480);
+
+        $response = $this->actingAs($staff)->post('/monitoring/'.$tank->id.'/record-bbm', [
+            'type' => 'pemasukan',
+            'height_cm' => 35.0,
+            'photo' => $photo,
+        ]);
+
+        $response->assertForbidden();
+    }
 }

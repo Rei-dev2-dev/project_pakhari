@@ -21,14 +21,19 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Authenticated Routes (Staff, Admin, SuperAdmin)
+// Authenticated Routes (Staff, Operator, Admin, SuperAdmin)
 Route::middleware(['auth'])->group(function (): void {
-    // Monitoring Routes
+    // Monitoring Read-Only & Live Polling Routes
     Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
+    Route::get('/monitoring/status-all', [MonitoringController::class, 'getAllStatuses'])->name('monitoring.statusAll');
     Route::get('/monitoring/{tank}', [MonitoringController::class, 'show'])->name('monitoring.show');
-    Route::post('/monitoring/{tank}/level', [MonitoringController::class, 'updateLevel'])->name('monitoring.update');
-    Route::post('/monitoring/{tank}/record-bbm', [MonitoringController::class, 'recordBbm'])->name('monitoring.recordBbm');
     Route::get('/monitoring/{tank}/status', [MonitoringController::class, 'getStatus'])->name('monitoring.status');
+
+    // BBM Mutation Routes (Operator, Admin, SuperAdmin only - Staff is view-only)
+    Route::middleware(['role:operator,admin,superadmin'])->group(function (): void {
+        Route::post('/monitoring/{tank}/level', [MonitoringController::class, 'updateLevel'])->name('monitoring.update');
+        Route::post('/monitoring/{tank}/record-bbm', [MonitoringController::class, 'recordBbm'])->name('monitoring.recordBbm');
+    });
 
     // Report Routes (All authenticated users)
     Route::get('/laporan', [ReportController::class, 'index'])->name('laporan.index');

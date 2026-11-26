@@ -19,11 +19,17 @@ class ChartController extends Controller
         $selectedTankId = $request->filled('tank_id') && $request->input('tank_id') !== '' ? (int) $request->input('tank_id') : null;
         $selectedMetric = $request->input('metric', 'volume'); // volume, comparison, pemasukan, pemakaian
 
-        // Fetch available years from telemetry history
-        // Uses Eloquent whereNotNull + PHP-side year extraction for DB compatibility
+        // Fetch available years from telemetry history using SQL DISTINCT year extraction
+        $driver = config('database.default');
+        $yearExpr = $driver === 'sqlite'
+            ? 'CAST(strftime("%Y", created_at) AS INTEGER) as yr'
+            : 'YEAR(created_at) as yr';
+
         $availableYears = TankTelemetry::whereNotNull('created_at')
-            ->pluck('created_at')
-            ->map(fn ($d) => (int) date('Y', strtotime((string) $d)))
+            ->selectRaw("DISTINCT {$yearExpr}")
+            ->pluck('yr')
+            ->map(fn ($y) => (int) $y)
+            ->filter(fn ($y) => $y > 0)
             ->push((int) date('Y'))
             ->unique()
             ->sortDesc()
@@ -35,7 +41,10 @@ class ChartController extends Controller
         }
 
         // Fetch active tanks (automatically integrates any newly added tanks)
-        $tanksQuery = Tank::where('is_active', true)->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
+        $tanksQuery = Tank::where('is_active', true)
+            ->with(['latestTelemetryRelation'])
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc');
         $allTanks = $tanksQuery->get();
 
         $tanks = $selectedTankId
@@ -57,7 +66,7 @@ class ChartController extends Controller
         $totalPemakaianCount = 0;
 
         foreach ($tanks as $tank) {
-            $latest = $tank->telemetries()->latest()->first();
+            $latest = $tank->latestTelemetry();
             $curVol = $latest ? (float) $latest->volume_liters : 0.0;
             $curPct = $latest ? (float) $latest->percentage : ($tank->capacity_liters > 0 ? round(($curVol / $tank->capacity_liters) * 100, 1) : 0.0);
             $curHeight = $latest ? (float) $latest->height_cm : 0.0;

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Tank;
 use App\Models\TankTelemetry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -128,6 +129,47 @@ class TandonMonitoringTest extends TestCase
             'volume_liters' => 96.5,
             'device_id' => 'ESP32-PROD-01',
             'status' => 'warning_full',
+        ]);
+    }
+
+    /**
+     * Test receiving ultrasonic distance_cm payload from WT32-ETH01 + JSN-SR04T for a specific tank_code.
+     */
+    public function test_can_receive_ultrasonic_distance_for_multi_tank_iot(): void
+    {
+        $tankB = Tank::create([
+            'name' => 'Tangki B (Zona 2)',
+            'code' => 'TNK-B',
+            'capacity_liters' => 200.0,
+            'length_cm' => 250.0,
+            'width_cm' => 100.0,
+            'height_cm' => 80.0,
+            'diameter_cm' => 100.0,
+            'is_active' => true,
+            'sort_order' => 2,
+        ]);
+
+        // Sensor mounted at 100cm from bottom (20cm above 80cm max fuel height to avoid JSN-SR04T 20cm blind zone)
+        // Sensor reads distance_cm = 60cm => fuel height = 100 - 60 = 40cm (50% of 80cm => 100.0 Liters)
+        $response = $this->postJson('/api/iot/telemetry', [
+            'tank_code' => 'TNK-B',
+            'distance_cm' => 60.0,
+            'sensor_mount_height_cm' => 100.0,
+            'device_id' => 'ESP32-ETH01-01',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('tank.code', 'TNK-B')
+            ->assertJsonPath('telemetry.height_cm', 40)
+            ->assertJsonPath('telemetry.volume_liters', 100)
+            ->assertJsonPath('telemetry.percentage', 50);
+
+        $this->assertDatabaseHas('tank_telemetries', [
+            'tank_id' => $tankB->id,
+            'height_cm' => 40.0,
+            'volume_liters' => 100.0,
+            'device_id' => 'ESP32-ETH01-01',
         ]);
     }
 }

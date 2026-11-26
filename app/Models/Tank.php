@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tank extends Model
 {
@@ -79,8 +80,22 @@ class Tank extends Model
         return $this->hasMany(RiwayatTransaksiBbm::class, 'tank_id');
     }
 
+    /**
+     * Get the latest telemetry record as an Eloquent relationship (prevents limit(1) eager-load bug).
+     *
+     * @return HasOne<TankTelemetry, $this>
+     */
+    public function latestTelemetryRelation(): HasOne
+    {
+        return $this->hasOne(TankTelemetry::class, 'tank_id')->latestOfMany();
+    }
+
     public function latestTelemetry(): ?TankTelemetry
     {
+        if ($this->relationLoaded('latestTelemetryRelation')) {
+            return $this->getRelation('latestTelemetryRelation');
+        }
+
         return $this->telemetries()->latest()->first();
     }
 }

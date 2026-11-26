@@ -61,14 +61,14 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         @forelse($tanks as $tank)
             @php
-                $latest = $tank->telemetries->first();
+                $latest = $tank->latestTelemetry();
                 $vol = $latest ? (float) $latest->volume_liters : 0.0;
                 $cap = (float) $tank->capacity_liters > 0 ? (float) $tank->capacity_liters : 100.0;
                 $pct = $latest ? (float) $latest->percentage : round(($vol / $cap) * 100, 1);
                 $h = $latest ? (float) $latest->height_cm : round(($vol / $cap) * (float) $tank->height_cm, 1);
                 $status = $latest ? $latest->status : ($vol <= 0 ? 'empty' : 'normal');
             @endphp
-            <div class="bg-slate-900 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-200 flex flex-col justify-between group">
+            <div class="bg-slate-900 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-200 flex flex-col justify-between group" data-tank-card="{{ $tank->id }}">
                 <div>
                     <!-- 1. Card Header -->
                     <div class="flex items-start justify-between mb-4">
@@ -85,7 +85,7 @@
                         </div>
 
                         <!-- Status Badge -->
-                        <span class="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full
+                        <span id="tank-status-{{ $tank->id }}" class="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full
                             @if($status === 'warning_full') bg-rose-500/10 text-rose-400 border border-rose-500/30
                             @elseif($status === 'low') bg-amber-500/10 text-amber-400 border border-amber-500/30
                             @elseif($status === 'empty') bg-slate-500/10 text-slate-400 border border-slate-500/30
@@ -116,7 +116,7 @@
                                 <!-- Ketinggian -->
                                 <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5">
                                     <span class="text-[10px] text-slate-400 block font-medium">Ketinggian BBM (Solar)</span>
-                                    <span class="text-xs font-bold text-slate-200 font-mono">{{ number_format($h, 1) }} cm</span>
+                                    <span id="tank-height-{{ $tank->id }}" class="text-xs font-bold text-slate-200 font-mono">{{ number_format($h, 1) }} cm</span>
                                     <span class="text-[9px] text-slate-500 block font-mono">Max: {{ number_format($tank->height_cm, 0) }}cm</span>
                                 </div>
 
@@ -155,9 +155,9 @@
                         <div class="flex items-baseline justify-between text-xs">
                             <span class="text-slate-400 font-medium">Volume Terkini</span>
                             <div class="flex items-baseline gap-1">
-                                <span class="text-base font-extrabold text-white font-mono">{{ number_format($vol, 1) }}</span>
+                                <span id="tank-vol-{{ $tank->id }}" class="text-base font-extrabold text-white font-mono">{{ number_format($vol, 1) }}</span>
                                 <span class="text-xs text-slate-400 font-mono">/ {{ number_format($cap, 1) }} Liter</span>
-                                <span class="text-xs font-bold font-mono ml-1
+                                <span id="tank-pct-{{ $tank->id }}" class="text-xs font-bold font-mono ml-1
                                     @if($pct >= 90) text-rose-400
                                     @elseif($pct <= 20) text-amber-400
                                     @else text-cyan-400 @endif">
@@ -168,7 +168,7 @@
 
                         <!-- Level Bar -->
                         <div class="w-full bg-slate-950 rounded-full h-2.5 p-0.5 border border-slate-800 overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-500
+                            <div id="tank-bar-{{ $tank->id }}" class="h-full rounded-full transition-all duration-500
                                 @if($pct >= 90) bg-gradient-to-r from-rose-500 to-red-400
                                 @elseif($pct <= 20) bg-gradient-to-r from-amber-500 to-yellow-400
                                 @else bg-gradient-to-r from-cyan-500 to-sky-400 @endif"
@@ -706,6 +706,9 @@
     const WATER_FILL_RANGE  = WATER_MAX_Y - WATER_MIN_Y;    // 0.900 m
     const TANK_Z            = 0.000;
 
+    // Registry of mini 3D card updaters for live IoT polling
+    const miniCardUpdaters = {};
+
     // Load GLTF once and reuse across cards
     const gltfLoader = new GLTFLoader();
     gltfLoader.load(MODEL_URL, (gltf) => {
@@ -719,10 +722,12 @@
     });
 
     function initMini3dCard(container, baseModel) {
+        const tankId = container.dataset.tankId;
         const width = container.clientWidth || 200;
         const height = container.clientHeight || 180;
-        const volume = parseFloat(container.dataset.volume) || 0;
-        const capacity = parseFloat(container.dataset.capacity) || 100;
+        let currentVol = parseFloat(container.dataset.volume) || 0;
+        let targetVol = currentVol;
+        const capacity = Math.max(1, parseFloat(container.dataset.capacity) || 100);
 
         // Scene
         const scene = new THREE.Scene();
@@ -762,24 +767,11 @@
         scene.add(pedestal);
 
         // Water Material & Clipping Plane
-        const ratio = Math.max(0, Math.min(1, volume / capacity));
-        const currentHeight = WATER_MIN_Y + ratio * WATER_FILL_RANGE;
-
-        const waterClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), currentHeight);
-        
-        let waterColor = 0xf59e0b;
-        let waterEmissive = 0xd97706;
-        if (ratio >= 0.95) {
-            waterColor = 0xf43f5e;
-            waterEmissive = 0xbe123c;
-        } else if (ratio <= 0.20 && volume > 0) {
-            waterColor = 0xf97316;
-            waterEmissive = 0xc2410c;
-        }
+        const waterClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), WATER_MIN_Y);
 
         const waterMaterial = new THREE.MeshPhysicalMaterial({
-            color: waterColor,
-            emissive: waterEmissive,
+            color: 0xf59e0b,
+            emissive: 0xd97706,
             emissiveIntensity: 0.2,
             roughness: 0.1,
             metalness: 0.05,
@@ -796,31 +788,64 @@
         waterCylinderGeo.rotateZ(Math.PI / 2);
         const waterMesh = new THREE.Mesh(waterCylinderGeo, waterMaterial);
         waterMesh.position.set(0, WATER_CENTER_Y, TANK_Z);
+        scene.add(waterMesh);
 
-        if (volume > 0.05) {
-            scene.add(waterMesh);
+        // Water Top Surface Cap
+        const surfaceMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xf59e0b,
+            emissive: 0xd97706,
+            emissiveIntensity: 0.25,
+            roughness: 0.05,
+            transparent: true,
+            opacity: 0.9,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const surfaceGeo = new THREE.PlaneGeometry(WATER_LENGTH, 1.0, 1, 1);
+        surfaceGeo.rotateX(-Math.PI / 2);
+        const surfaceMesh = new THREE.Mesh(surfaceGeo, surfaceMaterial);
+        surfaceMesh.position.set(0, WATER_MIN_Y, TANK_Z);
+        scene.add(surfaceMesh);
 
-            // Water Top Surface Cap
-            const surfaceMaterial = new THREE.MeshPhysicalMaterial({
-                color: waterColor,
-                emissive: waterEmissive,
-                emissiveIntensity: 0.25,
-                roughness: 0.05,
-                transparent: true,
-                opacity: 0.9,
-                side: THREE.DoubleSide,
-                depthWrite: false
-            });
-            const surfaceGeo = new THREE.PlaneGeometry(WATER_LENGTH, 1.0, 1, 1);
-            surfaceGeo.rotateX(-Math.PI / 2);
-            const surfaceMesh = new THREE.Mesh(surfaceGeo, surfaceMaterial);
-            surfaceMesh.position.set(0, currentHeight, TANK_Z);
+        function applyMiniWaterLevel(vol) {
+            const ratio = Math.max(0, Math.min(1, vol / capacity));
+            const currentHeight = WATER_MIN_Y + ratio * WATER_FILL_RANGE;
+            waterClipPlane.constant = currentHeight;
 
-            const dy = currentHeight - WATER_CENTER_Y;
-            const rSq = Math.max(0, WATER_RADIUS * WATER_RADIUS - dy * dy);
-            const surfaceWidthZ = 2 * Math.sqrt(rSq);
-            surfaceMesh.scale.set(1.0, 1.0, Math.max(0.005, surfaceWidthZ - 0.006));
-            scene.add(surfaceMesh);
+            let waterColor = 0xf59e0b;
+            let waterEmissive = 0xd97706;
+            if (ratio >= 0.95) {
+                waterColor = 0xf43f5e;
+                waterEmissive = 0xbe123c;
+            } else if (ratio <= 0.20 && vol > 0) {
+                waterColor = 0xf97316;
+                waterEmissive = 0xc2410c;
+            }
+            waterMaterial.color.setHex(waterColor);
+            waterMaterial.emissive.setHex(waterEmissive);
+            surfaceMaterial.color.setHex(waterColor);
+            surfaceMaterial.emissive.setHex(waterEmissive);
+
+            if (vol <= 0.05) {
+                waterMesh.visible = false;
+                surfaceMesh.visible = false;
+            } else {
+                waterMesh.visible = true;
+                surfaceMesh.visible = true;
+                surfaceMesh.position.y = currentHeight;
+                const dy = currentHeight - WATER_CENTER_Y;
+                const rSq = Math.max(0, WATER_RADIUS * WATER_RADIUS - dy * dy);
+                const surfaceWidthZ = 2 * Math.sqrt(rSq);
+                surfaceMesh.scale.set(1.0, 1.0, Math.max(0.005, surfaceWidthZ - 0.006));
+            }
+        }
+
+        applyMiniWaterLevel(currentVol);
+
+        if (tankId) {
+            miniCardUpdaters[tankId] = (newVolume) => {
+                targetVol = parseFloat(newVolume) || 0;
+            };
         }
 
         // Clone Tank Model
@@ -851,9 +876,13 @@
 
         scene.add(tankClone);
 
-        // Animation render loop
+        // Animation render loop with smooth volume lerp
         function animate() {
             requestAnimationFrame(animate);
+            if (Math.abs(targetVol - currentVol) > 0.01) {
+                currentVol += (targetVol - currentVol) * 0.08;
+                applyMiniWaterLevel(currentVol);
+            }
             renderer.render(scene, camera);
         }
         animate();
@@ -870,6 +899,39 @@
         });
         resizeObserver.observe(container);
     }
+
+    // Live Polling for Multi-Tank IoT Updates (every 4 seconds)
+    const STATUS_ALL_URL = "{{ route('monitoring.statusAll') }}";
+    async function pollAllTankStatuses() {
+        try {
+            const res = await fetch(STATUS_ALL_URL, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success || !Array.isArray(data.tanks)) return;
+
+            data.tanks.forEach((t) => {
+                if (miniCardUpdaters[t.id]) {
+                    miniCardUpdaters[t.id](t.volume_liters);
+                }
+                const volEl = document.getElementById(`tank-vol-${t.id}`);
+                const pctEl = document.getElementById(`tank-pct-${t.id}`);
+                const heightEl = document.getElementById(`tank-height-${t.id}`);
+                const barEl = document.getElementById(`tank-bar-${t.id}`);
+                const statusEl = document.getElementById(`tank-status-${t.id}`);
+
+                if (volEl) volEl.textContent = Number(t.volume_liters).toFixed(1);
+                if (pctEl) pctEl.textContent = `(${Number(t.percentage).toFixed(1)}%)`;
+                if (heightEl) heightEl.textContent = `${Number(t.height_cm).toFixed(1)} cm`;
+                if (barEl) barEl.style.width = `${Math.min(100, Math.max(2, Number(t.percentage)))}%`;
+                if (statusEl && t.status) {
+                    statusEl.textContent = String(t.status).replace('_', ' ').toUpperCase();
+                }
+            });
+        } catch (err) {
+            // Ignore transient network errors during live polling
+        }
+    }
+    setInterval(pollAllTankStatuses, 4000);
 
     // Modal Control & Calculation Functions (Attached to window for inline onclick handlers)
     window.openPemasukanModal = function(tankId) {

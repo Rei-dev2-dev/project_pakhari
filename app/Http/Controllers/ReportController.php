@@ -209,6 +209,7 @@ class ReportController extends Controller
             $sheet->setCellValue('G'.$rowIndex, number_format($volAwal, 1).' L');
             $sheet->setCellValue('H'.$rowIndex, $volPerubahanStr);
             $sheet->setCellValue('I'.$rowIndex, number_format($log->volume_liters, 1).' L');
+            $sheet->setCellValue('J'.$rowIndex, number_format((float) $log->percentage, 1).'%');
             $cleanNotes = $log->notes ? preg_replace('/\s*&mdash;\s*(.*?)$/', ' ($1)', $log->notes) : '-';
             $cleanNotes = str_replace('&mdash;', '-', $cleanNotes);
 
@@ -277,9 +278,13 @@ class ReportController extends Controller
         }
 
         // ── Side Summary Table (Ringkasan Kapasitas & Volume Akhir Per Tangki) ──
-        $allTanks = Tank::where('is_active', true)->orderBy('sort_order', 'asc')->orderBy('id', 'asc')->get();
+        $allTanks = Tank::where('is_active', true)
+            ->with(['latestTelemetryRelation'])
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
         if ($allTanks->isEmpty()) {
-            $allTanks = Tank::orderBy('id', 'asc')->get();
+            $allTanks = Tank::with(['latestTelemetryRelation'])->orderBy('id', 'asc')->get();
         }
 
         // Header for Side Table

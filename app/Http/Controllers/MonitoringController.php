@@ -18,9 +18,7 @@ class MonitoringController extends Controller
     public function index(): View
     {
         $tanks = Tank::where('is_active', true)
-            ->with(['telemetries' => function ($query) {
-                $query->latest()->limit(1);
-            }])
+            ->with(['latestTelemetryRelation'])
             ->orderBy('sort_order', 'asc')
             ->orderBy('id', 'asc')
             ->get();
@@ -42,8 +40,8 @@ class MonitoringController extends Controller
             'tank' => $tank,
             'latest' => $latestTelemetry,
             'recentLogs' => $recentLogs,
-            'maxCapacity' => (float) $tank->capacity_liters,
-            'maxHeight' => (float) $tank->height_cm,
+            'maxCapacity' => max(1.0, (float) $tank->capacity_liters),
+            'maxHeight' => max(1.0, (float) $tank->height_cm),
         ]);
     }
 
@@ -52,8 +50,8 @@ class MonitoringController extends Controller
      */
     public function updateLevel(Request $request, Tank $tank): JsonResponse
     {
-        $maxCapacity = (float) $tank->capacity_liters;
-        $maxHeight = (float) $tank->height_cm;
+        $maxCapacity = max(1.0, (float) $tank->capacity_liters);
+        $maxHeight = max(1.0, (float) $tank->height_cm);
 
         $validated = $request->validate([
             'volume_liters' => ['required', 'numeric', 'min:0', 'max:'.$maxCapacity],
@@ -67,8 +65,13 @@ class MonitoringController extends Controller
         $heightCm = round(($volume / $maxCapacity) * $maxHeight, 2);
         $status = TankTelemetry::determineStatus($volume, $maxCapacity);
 
+        $latest = $tank->telemetries()->latest()->first();
+        $initialVol = $latest ? (float) $latest->volume_liters : $volume;
+
         $telemetry = $tank->telemetries()->create([
             'user_id' => auth()->id(),
+            'volume_awal' => $initialVol,
+            'volume_perubahan' => round($volume - $initialVol, 2),
             'volume_liters' => $volume,
             'percentage' => $percentage,
             'height_cm' => $heightCm,
@@ -86,11 +89,67 @@ class MonitoringController extends Controller
     }
 
     /**
+     * Get current status of all active tanks as JSON (for multi-tank IoT live polling on grid view).
+     */
+    public function getAllStatuses(): JsonResponse
+    {
+        $tanks = Tank::where('is_active', true)
+            ->with(['latestTelemetryRelation'])
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $data = $tanks->map(function (Tank $tank): array {
+            $latest = $tank->latestTelemetry();
+            $cap = max(1.0, (float) $tank->capacity_liters);
+            $vol = $latest ? (float) $latest->volume_liters : 0.0;
+            $pct = $latest ? (float) $latest->percentage : round(($vol / $cap) * 100, 1);
+            $height = $latest ? (float) $latest->height_cm : 0.0;
+            $status = $latest ? $latest->status : ($vol <= 0 ? 'empty' : 'normal');
+
+            return [
+                'id' => $tank->id,
+                'name' => $tank->name,
+                'code' => $tank->code,
+                'max_capacity' => $cap,
+                'max_height' => max(1.0, (float) $tank->height_cm),
+                'volume_liters' => $vol,
+                'percentage' => $pct,
+                'height_cm' => $height,
+                'status' => $status,
+                'updated_at' => $latest?->created_at?->format('H:i:s'),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'tanks' => $data,
+            'server_time' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Get current status as JSON (for IoT polling / realtime sync).
      */
     public function getStatus(Tank $tank): JsonResponse
     {
-        $latest = $tank->telemetries()->latest()->first();
+        $latest = $tank->telemetries()->with('user')->latest()->first();
+        $recentLogs = $tank->telemetries()->with('user')->latest()->take(10)->get()->map(function (TankTelemetry $log): array {
+            $username = $log->user?->username
+                ?? (str_starts_with($log->device_id ?? '', 'OPERATOR-')
+                    ? str_replace('OPERATOR-', '', (string) $log->device_id)
+                    : ($log->device_id ?: ($log->user?->name ?? 'Operator')));
+
+            return [
+                'id' => $log->id,
+                'time' => $log->created_at?->format('H:i:s') ?? '-',
+                'volume_liters' => (float) $log->volume_liters,
+                'height_cm' => (float) $log->height_cm,
+                'percentage' => (float) $log->percentage,
+                'status' => $log->status,
+                'username' => $username,
+            ];
+        });
 
         return response()->json([
             'success' => true,
@@ -98,12 +157,13 @@ class MonitoringController extends Controller
                 'id' => $tank->id,
                 'name' => $tank->name,
                 'code' => $tank->code,
-                'max_capacity' => (float) $tank->capacity_liters,
-                'max_height' => (float) $tank->height_cm,
+                'max_capacity' => max(1.0, (float) $tank->capacity_liters),
+                'max_height' => max(1.0, (float) $tank->height_cm),
                 'width' => (float) $tank->width_cm,
                 'diameter' => (float) $tank->diameter_cm,
             ],
             'telemetry' => $latest,
+            'recent_logs' => $recentLogs,
             'server_time' => now()->toIso8601String(),
         ]);
     }
@@ -113,19 +173,21 @@ class MonitoringController extends Controller
      */
     public function recordBbm(Request $request, Tank $tank): mixed
     {
-        $maxHeight = (float) $tank->height_cm;
-        $maxCapacity = (float) $tank->capacity_liters;
+        $maxHeight = max(1.0, (float) $tank->height_cm);
+        $maxCapacity = max(1.0, (float) $tank->capacity_liters);
 
         $validated = $request->validate([
             'type' => ['required', 'in:pemasukan,pemakaian'],
             'height_cm' => ['required', 'numeric', 'min:0', 'max:'.$maxHeight],
             'notes' => ['nullable', 'string', 'max:255'],
-            'photo' => ['nullable'],
-            'photo_cam' => ['nullable'],
+            'photo' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'photo_cam' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'photo_base64' => ['nullable', 'string'],
         ], [
             'height_cm.max' => "Ketinggian BBM tidak boleh melebihi tinggi maksimal tangki ({$maxHeight} cm) yang ditentukan oleh Admin.",
             'height_cm.min' => 'Ketinggian BBM tidak boleh bernilai negatif.',
+            'photo.image' => 'File bukti yang diunggah harus berupa gambar (JPG, PNG, WEBP).',
+            'photo_cam.image' => 'File foto kamera harus berupa gambar (JPG, PNG, WEBP).',
         ]);
 
         $inputHeight = (float) $validated['height_cm'];
@@ -143,8 +205,11 @@ class MonitoringController extends Controller
                     $ext = 'jpg';
                 }
             }
-            $decoded = base64_decode($base64Data);
-            if ($decoded !== false) {
+            if (! in_array($ext, ['jpg', 'png', 'webp', 'gif'], true)) {
+                $ext = 'jpg';
+            }
+            $decoded = base64_decode($base64Data, true);
+            if ($decoded !== false && strlen($decoded) > 0 && strlen($decoded) <= 10 * 1024 * 1024) {
                 $fileName = 'proof_'.now()->format('Ymd_His').'_'.uniqid().'.'.$ext;
                 Storage::disk('public')->put('telemetry_proofs/'.$fileName, $decoded);
                 $photoPath = 'telemetry_proofs/'.$fileName;

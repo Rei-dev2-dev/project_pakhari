@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\RiwayatTransaksiBbm;
 use App\Models\TankTelemetry;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -20,9 +21,10 @@ class CleanLaporanSeeder extends Seeder
     {
         $count = TankTelemetry::count();
 
-        // 1. Kosongkan tabel tank_telemetries (Laporan Telemetri & Transaksi BBM)
+        // 1. Kosongkan tabel tank_telemetries & riwayat_transaksi_bbm
         Schema::disableForeignKeyConstraints();
         TankTelemetry::truncate();
+        RiwayatTransaksiBbm::truncate();
         Schema::enableForeignKeyConstraints();
 
         // 2. Bersihkan file foto bukti di storage agar tidak menumpuk
